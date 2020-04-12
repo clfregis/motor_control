@@ -285,16 +285,18 @@ void motor_supervisor_task(void *arg) {
 	}
 }
 
-static void http_put_task(void *pvParameters){
+static void http_post_task(void *pvParameters){
     // Struct which contains the HTTP configuration
     // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv424esp_http_client_config_t
+    char data[50];
 
-    char Data[] = "{\"led_1\":\"OFF\"}";
 
     while(1){
 
+        int size = sprintf (data, "{\"temperature\":\"%d\"}", temperature);
+
         esp_http_client_config_t config = {
-        .url = "https://esp32-66ba5.firebaseio.com/leds.json",
+        .url = "https://esp32-66ba5.firebaseio.com/room.json",
         .event_handler = _http_event_handler,
         };
 
@@ -303,17 +305,17 @@ static void http_put_task(void *pvParameters){
         // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_initPK24esp_http_client_config_t
         esp_http_client_handle_t client = esp_http_client_init(&config);
 
-        esp_http_client_set_method(client, HTTP_METHOD_PUT);
+        esp_http_client_set_method(client, HTTP_METHOD_POST);
         // client_open will open the connection, write all header strings and return ESP_OK if all went well
         // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
-        if (esp_http_client_open(client, strlen(Data)) == ESP_OK) {
-            esp_http_client_write(client, Data, strlen(Data));
+        if (esp_http_client_open(client, size) == ESP_OK) {
+            esp_http_client_write(client, data, size);
             ESP_LOGI(TAG_1, "Connection opened");
             // This function need to call after esp_http_client_open, it will read from http stream, process all receive headers.
             // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
 
             esp_http_client_fetch_headers(client);
-            ESP_LOGI(TAG_1, "HTTP PUT Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
+            ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
 
             char valor[77];
             // Read the stream of data
@@ -330,7 +332,7 @@ static void http_put_task(void *pvParameters){
         esp_http_client_cleanup(client);
 
         // Wait for another update
-        vTaskDelay(30000/portTICK_RATE_MS);
+        vTaskDelay(600000/portTICK_RATE_MS);
 
     }
     
@@ -453,7 +455,7 @@ void app_main() {
     // Start motor supervisor task
     xTaskCreate(&motor_supervisor_task, "motor_supervisor_task", 2048, NULL, 5, NULL);
     // Start the put task
-    xTaskCreate(&http_put_task, "http_put_task", 4096, NULL, 5, NULL);
+    xTaskCreate(&http_post_task, "http_post_task", 4096, NULL, 5, NULL);
 
     //=============================
     // End of Tasks initializations
