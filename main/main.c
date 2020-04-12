@@ -31,12 +31,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/event_groups.h"
 #include "driver/gpio.h"
 #include "dht11.h"
 #include <time.h>
 #include <sys/time.h>
-#include <string.h>
-#include "freertos/event_groups.h"
 #include "esp_system.h"
 #include "esp_event.h"
 #include "esp_log.h"
@@ -45,6 +44,17 @@
 #include "nvs_flash.h"
 #include "protocol_examples_common.h"
 #include "esp_sntp.h"
+
+#include "esp_wifi.h"
+#include "esp_event_loop.h"
+#include "tcpip_adapter.h"
+#include "esp_tls.h"
+#include "esp_http_client.h"
+#include "lwip/err.h"
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include "lwip/netdb.h"
+#include "lwip/dns.h"
 
 /**
  * Brief:
@@ -78,12 +88,16 @@ static xQueueHandle gpio_evt_queue = NULL;
 //static uint8_t motor_update_status_msec = 1000;
 
 static const char *TAG = "LwIP SNTP";
+const int CONNECTED_BIT = BIT0;
+static const char *TAG_1 = "http-request";
 
 //==========================
 // Function definitions
 //==========================
 static void obtain_time(void);
 static void initialize_sntp(void);
+static void wifi_connection_start(void);
+static void wifi_connection_end(void);
 
 //==========================
 // End Function definitions
@@ -116,6 +130,45 @@ time_t last_time_on = 0;
 static void IRAM_ATTR gpio_isr_handler(void* arg) {
     uint32_t gpio_num = (uint32_t) arg;
     xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+}
+
+esp_err_t _http_event_handler(esp_http_client_event_t *evt)
+{
+    switch(evt->event_id) {
+        case HTTP_EVENT_ERROR:
+            ESP_LOGD(TAG_1, "HTTP_EVENT_ERROR");
+            break;
+        case HTTP_EVENT_ON_CONNECTED:
+            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_CONNECTED");
+            break;
+        case HTTP_EVENT_HEADER_SENT:
+            ESP_LOGD(TAG_1, "HTTP_EVENT_HEADER_SENT");
+            break;
+        case HTTP_EVENT_ON_HEADER:
+            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
+            break;
+        case HTTP_EVENT_ON_DATA:
+            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+            if (!esp_http_client_is_chunked_response(evt->client)) {
+                // Write out data
+                // printf("%.*s", evt->data_len, (char*)evt->data);
+            }
+
+            break;
+        case HTTP_EVENT_ON_FINISH:
+            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_FINISH");
+            break;
+        case HTTP_EVENT_DISCONNECTED:
+            ESP_LOGI(TAG_1, "HTTP_EVENT_DISCONNECTED");
+            int mbedtls_err = 0;
+            esp_err_t err = esp_tls_get_and_clear_last_error(evt->data, &mbedtls_err, NULL);
+            if (err != 0) {
+                ESP_LOGI(TAG_1, "Last esp error code: 0x%x", err);
+                ESP_LOGI(TAG_1, "Last mbedtls failure: 0x%x", mbedtls_err);
+            }
+            break;
+    }
+    return ESP_OK;
 }
 
 
@@ -191,6 +244,7 @@ void clock_task(void *arg) {
 }
 
 // Task that supervise the motor, time operation and status
+// To implement: Create a local buffer that gather information each second and clears it upon uploading to weberver
 void motor_supervisor_task(void *arg) {
 	struct tm timeinfo_motor;
     char strftime_buf_motor[64];
@@ -229,7 +283,57 @@ void motor_supervisor_task(void *arg) {
 		// Wait for another update
         vTaskDelay(1000/portTICK_RATE_MS);
 	}
+}
 
+static void http_put_task(void *pvParameters){
+    // Struct which contains the HTTP configuration
+    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv424esp_http_client_config_t
+
+    char Data[] = "{\"led_1\":\"OFF\"}";
+
+    while(1){
+
+        esp_http_client_config_t config = {
+        .url = "https://esp32-66ba5.firebaseio.com/leds.json",
+        .event_handler = _http_event_handler,
+        };
+
+        // Call the client init passing the config struct to start a HTTP session
+        // It returns a esp_http_client_handle_t that you must use as input to other functions in the interface
+        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_initPK24esp_http_client_config_t
+        esp_http_client_handle_t client = esp_http_client_init(&config);
+
+        esp_http_client_set_method(client, HTTP_METHOD_PUT);
+        // client_open will open the connection, write all header strings and return ESP_OK if all went well
+        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
+        if (esp_http_client_open(client, strlen(Data)) == ESP_OK) {
+            esp_http_client_write(client, Data, strlen(Data));
+            ESP_LOGI(TAG_1, "Connection opened");
+            // This function need to call after esp_http_client_open, it will read from http stream, process all receive headers.
+            // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
+
+            esp_http_client_fetch_headers(client);
+            ESP_LOGI(TAG_1, "HTTP PUT Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
+
+            char valor[77];
+            // Read the stream of data
+            esp_http_client_read(client, valor, 77);
+
+            printf("%s\n",valor);
+
+            esp_http_client_close(client);
+        }
+        else {
+            ESP_LOGE(TAG_1, "Connection failed");
+        }
+
+        esp_http_client_cleanup(client);
+
+        // Wait for another update
+        vTaskDelay(30000/portTICK_RATE_MS);
+
+    }
+    
 }
 
 
@@ -274,6 +378,8 @@ void app_main() {
     // End of GPIO configuration
     //=============================
 
+    wifi_connection_start();
+    
     //=============================
     // RTC configuration
     //=============================
@@ -283,11 +389,11 @@ void app_main() {
     time(&now);
     localtime_r(&now, &timeinfo);
     // Is time set? If not, tm_year will be (1970 - 1900).
-    if (timeinfo.tm_year < (2016 - 1900)) {
+    if (timeinfo.tm_year < (2020 - 1900)) {
         ESP_LOGI(TAG, "Time is not set yet. Connecting to WiFi and getting time over NTP.");
         obtain_time();
         // update 'now' variable with current time
-        time(&now);
+        //time(&now); Already done inside obtain_time
         time(&last_time_on);
         time(&last_time_off);
     }
@@ -346,6 +452,8 @@ void app_main() {
     xTaskCreate(&clock_task, "clock_task", 3072, NULL, 5, NULL);
     // Start motor supervisor task
     xTaskCreate(&motor_supervisor_task, "motor_supervisor_task", 2048, NULL, 5, NULL);
+    // Start the put task
+    xTaskCreate(&http_put_task, "http_put_task", 4096, NULL, 5, NULL);
 
     //=============================
     // End of Tasks initializations
@@ -357,6 +465,23 @@ void app_main() {
 // Functions
 //==========================
 static void obtain_time(void) {
+
+    initialize_sntp();
+
+    // wait for time to be set
+    time_t now = 0;
+    struct tm timeinfo = { 0 };
+    int retry = 0;
+    const int retry_count = 30;
+    while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count) {
+        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+    }
+    time(&now);
+    localtime_r(&now, &timeinfo);
+}
+
+static void wifi_connection_start(void){
     ESP_ERROR_CHECK( nvs_flash_init() );
     tcpip_adapter_init();
     ESP_ERROR_CHECK( esp_event_loop_create_default() );
@@ -366,21 +491,9 @@ static void obtain_time(void) {
      * examples/protocols/README.md for more information about this function.
      */
     ESP_ERROR_CHECK(example_connect());
+}
 
-    initialize_sntp();
-
-    // wait for time to be set
-    time_t now = 0;
-    struct tm timeinfo = { 0 };
-    int retry = 0;
-    const int retry_count = 10;
-    while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count) {
-        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
-    }
-    time(&now);
-    localtime_r(&now, &timeinfo);
-
+static void wifi_connection_end(void){
     ESP_ERROR_CHECK( example_disconnect() );
 }
 
