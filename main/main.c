@@ -90,6 +90,8 @@ static xQueueHandle gpio_evt_queue = NULL;
 static const char *TAG = "LwIP SNTP";
 const int CONNECTED_BIT = BIT0;
 static const char *TAG_1 = "http-request";
+static const char *motor_address = "motor_1";
+static const char *firebase_address = "esp32-66ba5.firebaseio.com";
 
 //==========================
 // Function definitions
@@ -98,7 +100,8 @@ static void obtain_time(void);
 static void initialize_sntp(void);
 static void wifi_connection_start(void);
 static void wifi_connection_end(void);
-
+esp_err_t _http_event_handler(esp_http_client_event_t *evt);
+static void IRAM_ATTR gpio_isr_handler(void* arg);
 //==========================
 // End Function definitions
 //==========================
@@ -125,52 +128,6 @@ time_t last_time_on = 0;
 //==========================
 // Tasks
 //==========================
-
-// When hardware interrupts occurs on the pre-determined pin, it calls this functions which inserts and event on the queue
-static void IRAM_ATTR gpio_isr_handler(void* arg) {
-    uint32_t gpio_num = (uint32_t) arg;
-    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
-}
-
-esp_err_t _http_event_handler(esp_http_client_event_t *evt)
-{
-    switch(evt->event_id) {
-        case HTTP_EVENT_ERROR:
-            ESP_LOGD(TAG_1, "HTTP_EVENT_ERROR");
-            break;
-        case HTTP_EVENT_ON_CONNECTED:
-            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_CONNECTED");
-            break;
-        case HTTP_EVENT_HEADER_SENT:
-            ESP_LOGD(TAG_1, "HTTP_EVENT_HEADER_SENT");
-            break;
-        case HTTP_EVENT_ON_HEADER:
-            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
-            break;
-        case HTTP_EVENT_ON_DATA:
-            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
-            if (!esp_http_client_is_chunked_response(evt->client)) {
-                // Write out data
-                // printf("%.*s", evt->data_len, (char*)evt->data);
-            }
-
-            break;
-        case HTTP_EVENT_ON_FINISH:
-            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_FINISH");
-            break;
-        case HTTP_EVENT_DISCONNECTED:
-            ESP_LOGI(TAG_1, "HTTP_EVENT_DISCONNECTED");
-            int mbedtls_err = 0;
-            esp_err_t err = esp_tls_get_and_clear_last_error(evt->data, &mbedtls_err, NULL);
-            if (err != 0) {
-                ESP_LOGI(TAG_1, "Last esp error code: 0x%x", err);
-                ESP_LOGI(TAG_1, "Last mbedtls failure: 0x%x", mbedtls_err);
-            }
-            break;
-    }
-    return ESP_OK;
-}
-
 
 // Task that controls the motor operation, turning it on, off
 static void motor_control_task(void* arg) {
@@ -212,8 +169,7 @@ void temperature_humidity_task(void *arg) {
 
 }
 
-void time_sync_notification_cb(struct timeval *tv)
-{
+void time_sync_notification_cb(struct timeval *tv) {
     ESP_LOGI(TAG, "Notification of a time synchronization event");
 }
 
@@ -285,18 +241,25 @@ void motor_supervisor_task(void *arg) {
 	}
 }
 
-static void http_post_task(void *pvParameters){
-    // Struct which contains the HTTP configuration
-    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv424esp_http_client_config_t
-    char data[50];
+static void database_task(void *pvParameters){
+    char data[25];
+    //char data_hum[3];
+    char url[62];
+    char *parameter = "Temperature";
 
 
     while(1){
+        // ======================================================================
+        // Start by sending temperature value
+        // ======================================================================
+        //strcpy(parameter,"Temperature");
+        int size = sprintf (data, "%d", temperature);
+        sprintf(url, "https://%s/%s/%s.json",firebase_address, motor_address, parameter);
 
-        int size = sprintf (data, "{\"temperature\":\"%d\"}", temperature);
-
+        // Struct which contains the HTTP configuration
+        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv424esp_http_client_config_t
         esp_http_client_config_t config = {
-        .url = "https://esp32-66ba5.firebaseio.com/room.json",
+        .url = url,
         .event_handler = _http_event_handler,
         };
 
@@ -309,28 +272,29 @@ static void http_post_task(void *pvParameters){
         // client_open will open the connection, write all header strings and return ESP_OK if all went well
         // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
         if (esp_http_client_open(client, size) == ESP_OK) {
-            esp_http_client_write(client, data, size);
             ESP_LOGI(TAG_1, "Connection opened");
-            // This function need to call after esp_http_client_open, it will read from http stream, process all receive headers.
+            esp_http_client_write(client, data, size);
             // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
-
             esp_http_client_fetch_headers(client);
             ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
-
+            //============
+            // Debug, but, in the future, perform a verification that the message was sent
             char valor[77];
             // Read the stream of data
             esp_http_client_read(client, valor, 77);
-
             printf("%s\n",valor);
-
-            esp_http_client_close(client);
+            // Debug
+            //============
         }
         else {
             ESP_LOGE(TAG_1, "Connection failed");
         }
+        // ======================================================================
+        // End of temperature value
+        // ======================================================================s
 
+        esp_http_client_close(client);
         esp_http_client_cleanup(client);
-
         // Wait for another update
         vTaskDelay(600000/portTICK_RATE_MS);
 
@@ -454,8 +418,8 @@ void app_main() {
     xTaskCreate(&clock_task, "clock_task", 3072, NULL, 5, NULL);
     // Start motor supervisor task
     xTaskCreate(&motor_supervisor_task, "motor_supervisor_task", 2048, NULL, 5, NULL);
-    // Start the put task
-    xTaskCreate(&http_post_task, "http_post_task", 4096, NULL, 5, NULL);
+    // Start the database task
+    xTaskCreate(&database_task, "database_task", 4096, NULL, 5, NULL);
 
     //=============================
     // End of Tasks initializations
@@ -509,6 +473,98 @@ static void initialize_sntp(void) {
 #endif
     sntp_init();
 }
+
+// When hardware interrupts occurs on the pre-determined pin, it calls this functions which inserts and event on the queue
+static void IRAM_ATTR gpio_isr_handler(void* arg) {
+    uint32_t gpio_num = (uint32_t) arg;
+    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+}
+
+esp_err_t _http_event_handler(esp_http_client_event_t *evt) {
+    switch(evt->event_id) {
+        case HTTP_EVENT_ERROR:
+            ESP_LOGD(TAG_1, "HTTP_EVENT_ERROR");
+            break;
+        case HTTP_EVENT_ON_CONNECTED:
+            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_CONNECTED");
+            break;
+        case HTTP_EVENT_HEADER_SENT:
+            ESP_LOGD(TAG_1, "HTTP_EVENT_HEADER_SENT");
+            break;
+        case HTTP_EVENT_ON_HEADER:
+            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
+            break;
+        case HTTP_EVENT_ON_DATA:
+            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+            if (!esp_http_client_is_chunked_response(evt->client)) {
+                // Write out data
+                // printf("%.*s", evt->data_len, (char*)evt->data);
+            }
+
+            break;
+        case HTTP_EVENT_ON_FINISH:
+            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_FINISH");
+            break;
+        case HTTP_EVENT_DISCONNECTED:
+            ESP_LOGI(TAG_1, "HTTP_EVENT_DISCONNECTED");
+            int mbedtls_err = 0;
+            esp_err_t err = esp_tls_get_and_clear_last_error(evt->data, &mbedtls_err, NULL);
+            if (err != 0) {
+                ESP_LOGI(TAG_1, "Last esp error code: 0x%x", err);
+                ESP_LOGI(TAG_1, "Last mbedtls failure: 0x%x", mbedtls_err);
+            }
+            break;
+    }
+    return ESP_OK;
+}
+// In the future make this function return a value to check if the data was send to the database
+// void post_request(char *firebase_address, char *motor_address, char *parameter, char *data){
+//         char data_temp[25];
+//         //char data_hum[3];
+//         char url[62];
+//         char parameter[12];
+
+//         strcpy(parameter,"Temperature");
+//         int size = sprintf (data_temp, "%d", temperature);
+//         sprintf(url, "https://%s/%s/%s.json",firebase_address, motor_address, parameter);
+
+//         // Struct which contains the HTTP configuration
+//         // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv424esp_http_client_config_t
+//         esp_http_client_config_t config = {
+//         .url = url,
+//         .event_handler = _http_event_handler,
+//         };
+
+//         // Call the client init passing the config struct to start a HTTP session
+//         // It returns a esp_http_client_handle_t that you must use as input to other functions in the interface
+//         // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_initPK24esp_http_client_config_t
+//         esp_http_client_handle_t client = esp_http_client_init(&config);
+
+//         esp_http_client_set_method(client, HTTP_METHOD_POST);
+//         // client_open will open the connection, write all header strings and return ESP_OK if all went well
+//         // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
+//         if (esp_http_client_open(client, size) == ESP_OK) {
+//             ESP_LOGI(TAG_1, "Connection opened");
+//             esp_http_client_write(client, data_temp, size);
+//             // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
+//             esp_http_client_fetch_headers(client);
+//             ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
+//             //============
+//             // Debug, but, in the future, perform a verification that the message was sent
+//             char valor[77];
+//             // Read the stream of data
+//             esp_http_client_read(client, valor, 77);
+//             printf("%s\n",valor);
+//             // Debug
+//             //============
+//         }
+//         else {
+//             ESP_LOGE(TAG_1, "Connection failed");
+//         }
+
+//         esp_http_client_close(client);
+//         esp_http_client_cleanup(client);
+// }
 //==========================
 // End of Functions
 //==========================
