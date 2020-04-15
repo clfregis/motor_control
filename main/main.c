@@ -370,7 +370,7 @@ void database_task(void *pvParameters){
         esp_http_client_cleanup(client);
 
         // Wait for another update
-        vTaskDelay(60000/portTICK_RATE_MS);
+        vTaskDelay(600000/portTICK_RATE_MS);
 
     }
     
