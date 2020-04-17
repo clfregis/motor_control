@@ -1,4 +1,5 @@
-var temp = [], hum = [], time = [], status = [];
+var temp = [], hum = [], time = [], state = [];
+var status = 'OFF';
 
 
 var firebaseConfig = {
@@ -29,16 +30,31 @@ database.on('value', function(snapshot) {
       if (n=='Time'){
         time.push(snap[i][n]);
       }
+      if (n=='Status'){
+        state.push(snap[i][n]);
+      }
     }
   }
-  temp = temp.slice(temp.length - 20, temp.length);
-  hum = hum.slice(hum.length - 20, hum.length);
-  time = time.slice(time.lenght - 20, time.lenght);
-  drawGraph(time, temp, hum);
+  temp = temp.slice(-10, temp.length);
+  hum = hum.slice(-10, hum.length);
+  time = time.slice(-10, time.lenght);
+  state = state.slice(-10, state.lenght);
+
+  if (state[9]==1){
+    status='ON';
+  }
+  else{
+    status='OFF';
+  }
+
+  document.getElementById("status").innerHTML = "Status: " + status;
+
+  drawGraphWeather(time, temp, hum);
+  drawGraphStatus(time, state);
 });
 
-function drawGraph(label, graph1, graph2) {
-  var ctx = document.getElementById("myChart").getContext('2d');
+function drawGraphWeather(label, graph1, graph2) {
+  var ctx = document.getElementById("WeatherChart").getContext('2d');
   var myChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -71,7 +87,7 @@ function drawGraph(label, graph1, graph2) {
       stacked: false,
       title: {
         display: true,
-        text: 'Weather Station - Motor 1'
+        text: 'Weather Station'
       },
 
       scales: {
@@ -83,6 +99,54 @@ function drawGraph(label, graph1, graph2) {
           ticks: {
             beginAtZero: true,
             suggestedMax: 50
+          }
+
+        }],
+      }
+    }
+  });
+}
+
+
+
+function drawGraphStatus(label, graph1) {
+  var ctx = document.getElementById("StatusChart").getContext('2d');
+  var myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: label,
+      datasets: [{
+        label: "Status",
+
+        borderColor: 'rgb(0, 99, 132)',
+        backgroundColor: 'rgb(0, 99, 132)',
+        lineTension: 0,
+        fill: false,
+        data: graph1,
+        yAxisID: "y-axis-heartbeat",
+
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      hoverMode: 'index',
+      stacked: false,
+      title: {
+        display: true,
+        text: 'Operation'
+      },
+
+      scales: {
+        yAxes: [{
+          type: "linear",
+          display: true,
+          position: "left",
+          id: "y-axis-heartbeat",
+          ticks: {
+            beginAtZero: true,
+            stepSize: 1,
+            Max: 1
           }
 
         }],
