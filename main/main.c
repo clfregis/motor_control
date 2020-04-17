@@ -90,7 +90,7 @@ static xQueueHandle gpio_evt_queue = NULL;
 static const char *TAG = "LwIP SNTP";
 const int CONNECTED_BIT = BIT0;
 static const char *TAG_1 = "http-request";
-static const char *motor_address = "motor_1";
+static const char *motor_address = "motor_2";
 static const char *firebase_address = "esp32-66ba5.firebaseio.com";
 
 //==========================
@@ -241,20 +241,28 @@ void motor_supervisor_task(void *arg) {
 
 // for inside a while to update the buffer
 void database_task(void *pvParameters){
-    char parameter[14];
     char url[62];
-    char data[28];
+    char data[100]; //  { "Temperature" : 28, "Humidity" : "78", "Status" : "ON", "Time" : "14 Apr 2020 08:02:21" }
     int size;
     struct tm timeinfo;
     char strftime_db[26];
 
+    // Wait for for the first update
+    vTaskDelay(20000/portTICK_RATE_MS);
+
     while(1){
+        time(&now_clock);
+        setenv("TZ", "<-03>3", 1);
+        tzset();
+        localtime_r(&now_clock, &timeinfo);
+        strftime(strftime_db, sizeof(strftime_db), "%c", &timeinfo);
+
+        size = sprintf (data, "{ \"Temperature\" : %d, \"Humidity\" : %d, \"Status\" : %d, \"Time\" : \"%s\" }", temperature, humidity, motor_status, strftime_db);
+        sprintf(url, "https://%s/%s.json",firebase_address, motor_address);
+
         // ======================================
-        // Start by sending temperature value
+        // Start POST request
         // ======================================
-        strcpy(parameter,"Temperature");
-        size = sprintf (data, "%d", temperature);
-        sprintf(url, "https://%s/%s/%s.json",firebase_address, motor_address, parameter);
 
         // Struct which contains the HTTP configuration
         // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv424esp_http_client_config_t
@@ -276,13 +284,16 @@ void database_task(void *pvParameters){
             esp_http_client_write(client, data, size);
             // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
             esp_http_client_fetch_headers(client);
-            ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
+            //ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
+            if (esp_http_client_get_status_code(client)==200){
+                ESP_LOGI(TAG_1, "Message successfuly sent!");
+            }
             //============
             // Debug, but, in the future, perform a verification that the message was sent
-            char valor[77];
-            // Read the stream of data
-            esp_http_client_read(client, valor, 77);
-            printf("%s\n",valor);
+            // char valor[77];
+            // // Read the stream of data
+            // esp_http_client_read(client, valor, 77);
+            // printf("%s\n",valor);
             // Debug
             //============
 
@@ -292,79 +303,7 @@ void database_task(void *pvParameters){
             ESP_LOGE(TAG_1, "Connection failed");
         }
         // ======================================
-        // End of sending temperature value
-        // ======================================
-
-        // ======================================
-        // Humidity value
-        // ======================================
-        strcpy(parameter,"Humidity");
-        size = sprintf (data, "%d", humidity);
-        sprintf(url, "https://%s/%s/%s.json",firebase_address, motor_address, parameter);
-        esp_http_client_set_url(client, url);
-        esp_http_client_set_method(client, HTTP_METHOD_POST);
-        // client_open will open the connection, write all header strings and return ESP_OK if all went well
-        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
-        if (esp_http_client_open(client, size) == ESP_OK) {
-            ESP_LOGI(TAG_1, "Connection opened");
-            esp_http_client_write(client, data, size);
-            // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
-            esp_http_client_fetch_headers(client);
-            ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
-            //============
-            // Debug, but, in the future, perform a verification that the message was sent
-            char valor[77];
-            // Read the stream of data
-            esp_http_client_read(client, valor, 77);
-            printf("%s\n",valor);
-            // Debug
-            //============
-        }
-        else {
-            ESP_LOGE(TAG_1, "Connection failed");
-        }
-
-        // ======================================
-        // End of Humidity value
-        // ======================================
-
-        // ======================================
-        // Time value
-        // ======================================
-        time(&now_clock);
-        setenv("TZ", "<-03>3", 1);
-        tzset();
-        localtime_r(&now_clock, &timeinfo);
-        strftime(strftime_db, sizeof(strftime_db), "%c", &timeinfo);
-        
-        strcpy(parameter,"Time");
-        size = sprintf (data, "\"%s\"", strftime_db);
-        sprintf(url, "https://%s/%s/%s.json",firebase_address, motor_address, parameter);
-        esp_http_client_set_url(client, url);
-        esp_http_client_set_method(client, HTTP_METHOD_POST);
-        // client_open will open the connection, write all header strings and return ESP_OK if all went well
-        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
-        if (esp_http_client_open(client, size) == ESP_OK) {
-            ESP_LOGI(TAG_1, "Connection opened");
-            esp_http_client_write(client, data, size);
-            // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
-            esp_http_client_fetch_headers(client);
-            ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
-            //============
-            // Debug, but, in the future, perform a verification that the message was sent
-            char valor[77];
-            // Read the stream of data
-            esp_http_client_read(client, valor, 77);
-            printf("%s\n",valor);
-            // Debug
-            //============
-        }
-        else {
-            ESP_LOGE(TAG_1, "Connection failed");
-        }
-
-        // ======================================
-        // End of Humidity value
+        // End of POST request
         // ======================================
 
         esp_http_client_cleanup(client);

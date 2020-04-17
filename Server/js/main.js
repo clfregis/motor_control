@@ -1,4 +1,4 @@
-var temp = [], hum = [], time = [];
+var temp = [], hum = [], time = [], status = [];
 
 
 var firebaseConfig = {
@@ -15,17 +15,21 @@ var firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 // Get a reference to the database service
-var database = firebase.database().ref("motor_1");
-
-database.on('value', function (snapshot) {
-  for (let i in snapshot.val().Temperature) {
-    temp.push(snapshot.val().Temperature[i]);
-  }
-  for (let i in snapshot.val().Humidity) {
-    hum.push(snapshot.val().Humidity[i]);
-  }
-  for (let i in snapshot.val().Time) {
-    time.push(snapshot.val().Time[i]);
+var database = firebase.database().ref("motor_2");
+database.on('value', function(snapshot) {
+  let snap = snapshot.val(); // vai ter todo o objeto
+  for (i in snap){ // vai iterar em cada key
+    for (n in snap[i]){
+      if (n=='Temperature'){
+        temp.push(snap[i][n]);
+      }
+      if (n=='Humidity'){
+        hum.push(snap[i][n]);
+      }
+      if (n=='Time'){
+        time.push(snap[i][n]);
+      }
+    }
   }
   temp = temp.slice(temp.length - 20, temp.length);
   hum = hum.slice(hum.length - 20, hum.length);
