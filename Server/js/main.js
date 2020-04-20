@@ -1,4 +1,4 @@
-var temp = [], hum = [], time = [], state = [];
+var temp = [], hum = [], time = [], state = [], xlabel = [];
 var status = 'OFF';
 
 
@@ -28,7 +28,11 @@ database.on('value', function(snapshot) {
         hum.push(snap[i][n]);
       }
       if (n=='Time'){
-        time.push(snap[i][n]);
+        console.log(snap[i][n])
+        const tmp1 = snap[i][n].split(' ');
+        const tmp2 = snap[i][n].split('');
+        xlabel.push(tmp1[0]+", "+tmp1[1]+" "+tmp1[2]+" "+tmp1[4]);
+        time.push(tmp2[11]+tmp2[12]+tmp2[13]+tmp2[14]+tmp2[15]);
       }
       if (n=='Status'){
         state.push(snap[i][n]);
@@ -49,11 +53,11 @@ database.on('value', function(snapshot) {
 
   document.getElementById("status").innerHTML = "Status: " + status;
 
-  drawGraphWeather(time, temp, hum);
-  drawGraphStatus(time, state);
+  drawGraphWeather(time, xlabel[0], temp, hum);
+  drawGraphStatus(time, xlabel[0], state);
 });
 
-function drawGraphWeather(label, graph1, graph2) {
+function drawGraphWeather(label, label_title, graph1, graph2) {
   var ctx = document.getElementById("WeatherChart").getContext('2d');
   var myChart = new Chart(ctx, {
     type: 'line',
@@ -62,54 +66,60 @@ function drawGraphWeather(label, graph1, graph2) {
       datasets: [{
         label: "Temperature",
         labelString: "ºC",
-        borderColor: 'rgb(255, 99, 132)',
-        backgroundColor: 'rgb(255, 99, 132)',
+        borderColor: "#3e95cd",
         fill: false,
         data: graph1,
-        yAxisID: "y-axis-heartbeat",
       },
       {
         label: "Humidity",
         labelString: "%",
-
-        borderColor: 'rgb(0, 99, 132)',
-        backgroundColor: 'rgb(0, 99, 132)',
+        borderColor: "#8e5ea2",
         fill: false,
         data: graph2,
-        yAxisID: "y-axis-heartbeat",
-
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      hoverMode: 'index',
-      stacked: false,
+      hover: {
+        mode:'nearest',
+        intersect: true
+      },
+      stacked: true,
       title: {
         display: true,
         text: 'Weather Station'
       },
 
       scales: {
+        xAxes: [{
+          display: true,
+          scaleLabel: {
+            display: true,
+            labelString: label_title
+          }
+        }],
         yAxes: [{
           type: "linear",
           display: true,
           position: "left",
-          id: "y-axis-heartbeat",
           ticks: {
             beginAtZero: true,
             suggestedMax: 50
+          },
+          scaleLabel: {
+            display: true,
+            labelString: 'Value'
           }
-
         }],
       }
     }
   });
 }
 
+  
 
-
-function drawGraphStatus(label, graph1) {
+function drawGraphStatus(label, label_title, graph1) {
   var ctx = document.getElementById("StatusChart").getContext('2d');
   var myChart = new Chart(ctx, {
     type: 'line',
@@ -117,14 +127,11 @@ function drawGraphStatus(label, graph1) {
       labels: label,
       datasets: [{
         label: "Status",
-
         borderColor: 'rgb(0, 99, 132)',
         backgroundColor: 'rgb(0, 99, 132)',
         lineTension: 0,
         fill: false,
         data: graph1,
-        yAxisID: "y-axis-heartbeat",
-
       }]
     },
     options: {
@@ -138,17 +145,26 @@ function drawGraphStatus(label, graph1) {
       },
 
       scales: {
+        xAxes: [{
+          display: true,
+          scaleLabel: {
+            display: true,
+            labelString: label_title
+          }
+        }],
         yAxes: [{
           type: "linear",
           display: true,
           position: "left",
-          id: "y-axis-heartbeat",
           ticks: {
             beginAtZero: true,
             stepSize: 1,
             Max: 1
+          },
+          scaleLabel: {
+            display: true,
+            labelString: 'Value'
           }
-
         }],
       }
     }
