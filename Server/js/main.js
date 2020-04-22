@@ -45,70 +45,61 @@ database.on('value', function(snapshot) {
   state = state.slice(-10, state.lenght);
 
   if (state[9]==1){
-    status='ON';
+    status='Operating';
+  }
+  else if (state[9]==0){
+    status='Stopped';
   }
   else{
-    status='OFF';
+    status='Halted';
   }
 
   document.getElementById("status").innerHTML = "Status: " + status;
 
-  drawGraphWeather(time, xlabel[0], temp, hum);
+  drawTemperature(time, xlabel[0], temp);
+  drawHumidity(time, xlabel[0], hum);
   drawGraphStatus(time, xlabel[0], state);
 });
 
-function drawGraphWeather(label, label_title, graph1, graph2) {
-  var ctx = document.getElementById("WeatherChart").getContext('2d');
+      
+
+function drawTemperature(label, label_title, graph) {
+  var ctx = document.getElementById("Temperature").getContext('2d');
   var myChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: label,
       datasets: [{
         label: "Temperature",
-        labelString: "ºC",
+        //labelString: "ºC",
         borderColor: "#C6BD74",
         backgroundColor: "#C6BD74",
         borderWidth: 4,
         fill: false,
-        data: graph1,
-      },
-      {
-        label: "Humidity",
-        labelString: "%",
-        borderColor: "#84A6CC",
-        backgroundColor: "#84A6CC",
-        borderWidth: 4,
-        fill: false,
-        data: graph2,
+        data: graph,
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      hover: {
-        mode:'nearest',
-        intersect: true
-      },
-      stacked: true,
+      aspectRatio: 1.8,
+      hoverMode: 'index',
+      stacked: false,
       title: {
-        display: true,
-        text: 'Weather Station',
-        fontSize: 22,
-        fontColor: '#BBC1CB',
-        fontFamily: 'Helvetica Neue',
+        display: false,
       },
       legend: {
-            display: true,
-            labels: {
-                fontSize: 14,
-                fontColor: '#BBC1CB',
-                fontFamily: 'Helvetica Neue',
-            }
-        },
+        display: false,
+      },
 
       scales: {
         xAxes: [{
           display: true,
+          gridLines: {
+            display: true,
+            color: '#676E7A',
+            zeroLineColor: '#676E7A',
+          },
           ticks: {
             fontSize: 14,
             fontColor: '#BBC1CB',
@@ -126,16 +117,23 @@ function drawGraphWeather(label, label_title, graph1, graph2) {
           type: "linear",
           display: true,
           position: "left",
+          gridLines: {
+            display: true,
+            color: '#676E7A',
+            zeroLineColor: '#676E7A',
+          },
           ticks: {
-            beginAtZero: true,
-            suggestedMax: 50,
+            beginAtZero: false,
+            stepSize: .5,
+            Max: 100,
+            Min: 0,
             fontSize: 14,
             fontColor: '#BBC1CB',
             fontFamily: 'Helvetica Neue',
           },
           scaleLabel: {
             display: true,
-            labelString: 'Value',
+            labelString: 'ºC',
             fontSize: 18,
             fontColor: '#BBC1CB',
             fontFamily: 'Helvetica Neue',
@@ -146,6 +144,86 @@ function drawGraphWeather(label, label_title, graph1, graph2) {
   });
 }
 
+function drawHumidity(label, label_title, graph) {
+  var ctx = document.getElementById("Humidity").getContext('2d');
+  var myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: label,
+      datasets: [{
+        label: "Humidity",
+        //labelString: "%",
+        borderColor: "#84A6CC",
+        backgroundColor: "#84A6CC",
+        borderWidth: 4,
+        fill: false,
+        data: graph,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      aspectRatio: 1.8,
+      hoverMode: 'index',
+      stacked: false,
+      title: {
+        display: false,
+      },
+      legend: {
+        display: false,
+      },
+
+      scales: {
+        xAxes: [{
+          display: true,
+          gridLines: {
+            display: true,
+            color: '#676E7A',
+            zeroLineColor: '#676E7A',
+          },
+          ticks: {
+            fontSize: 14,
+            fontColor: '#BBC1CB',
+            fontFamily: 'Helvetica Neue',
+          },
+          scaleLabel: {
+            display: true,
+            labelString: label_title,
+            fontSize: 18,
+            fontColor: '#BBC1CB',
+            fontFamily: 'Helvetica Neue',
+          }
+        }],
+        yAxes: [{
+          type: "linear",
+          display: true,
+          position: "left",
+          gridLines: {
+            display: true,
+            color: '#676E7A',
+            zeroLineColor: '#676E7A',
+          },
+          ticks: {
+            beginAtZero: false,
+            stepSize: .5,
+            Max: 100,
+            Min: 0,
+            fontSize: 14,
+            fontColor: '#BBC1CB',
+            fontFamily: 'Helvetica Neue',
+          },
+          scaleLabel: {
+            display: true,
+            labelString: '%',
+            fontSize: 18,
+            fontColor: '#BBC1CB',
+            fontFamily: 'Helvetica Neue',
+          }
+        }],
+      }
+    }
+  });
+}
   
 
 function drawGraphStatus(label, label_title, graph1) {
@@ -167,27 +245,24 @@ function drawGraphStatus(label, label_title, graph1) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      aspectRatio: 1.8,
       hoverMode: 'index',
       stacked: false,
       title: {
-        display: true,
-        text: 'Operation',
-        fontSize: 22,
-        fontColor: '#BBC1CB',
-        fontFamily: 'Helvetica Neue',
+        display: false,
       },
       legend: {
-            display: true,
-            labels: {
-                fontSize: 14,
-                fontColor: '#BBC1CB',
-                fontFamily: 'Helvetica Neue',
-            }
-        },
+        display: false,
+      },
 
       scales: {
         xAxes: [{
           display: true,
+          gridLines: {
+            display: true,
+            color: '#676E7A',
+            zeroLineColor: '#676E7A',
+          },
           ticks: {
             fontSize: 14,
             fontColor: '#BBC1CB',
@@ -205,6 +280,11 @@ function drawGraphStatus(label, label_title, graph1) {
           type: "linear",
           display: true,
           position: "left",
+          gridLines: {
+            display: true,
+            color: '#676E7A',
+            zeroLineColor: '#676E7A',
+          },
           ticks: {
             beginAtZero: true,
             stepSize: 1,

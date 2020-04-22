@@ -9,29 +9,71 @@
     <link rel="stylesheet" href="css/normalize.css">
     <link rel="stylesheet" href="css/main.css">
     <script src="js/vendor/modernizr-3.8.0.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
   </head>
 
 <body>
-  <div class="rcorners">
-    <h1 class="centerheader">Real Time Monitoring</h1>
-    <p id="status"></p>
-    <!-- <p>Continuous operating time: 130s</p> -->
-    <!-- <button type="button">Reset</button> -->
-    <div class="chartjs-size-monitor">
-      <div class="chartjs-size-monitor-expand">
-        <div class=""></div>
-      </div>
-      <div class="chartjs-size-monitor-shrink">
-        <div class=""></div>
-      </div>
-    </div>
-    <div class="graph">
-    	<canvas id="WeatherChart" width="798" height="398" class="chartjs-render-monitor"></canvas>
-    </div>
-    <div class="graph">
-    	<canvas id="StatusChart" width="798" height="398" class="chartjs-render-monitor"></canvas>
-    </div>
-  </div>
+	<div id="container">
+
+		<div class="left">
+			<div class="card">
+				<p id="title">Summary</p>
+				<p>Name: Motor 2</p>
+				<p id="status"></p>
+				<i class="fas fa-cloud"></i>
+				<p>Temperature: 26ºC</p>
+				<p>Humidity: 78%</p>
+			</div>
+
+			<div class="card">
+				<p id="title">Working Status</p>
+				<p>Daily Operation time: 15:00</p>
+				<p>Continuous operating time: 00:35</p>
+			    <button type="button">Stop/Start</button>
+			    <button type="button">Reset</button>
+			</div>
+
+			<div class="card">
+				<p id="title">Database</p>
+				<p>Motor Selection</p>
+				<div class="dropdown">
+					<button class="dropbtn">Motor</button>
+					<div class="dropdown-content">
+						<a href="#">Motor 1</a>
+						<a href="#">Motor 2</a>
+						<a href="#">Motor 3</a>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="right">
+			<div class="card">
+				<p id="title">Temperature</p>
+
+			    <div class="graph">
+			    	<canvas id="Temperature" class="chartjs-render-monitor"></canvas>
+			    </div>
+			</div>
+
+			<div class="card">
+				<p id="title">Humidity</p>
+
+			    <div class="graph">
+			    	<canvas id="Humidity" class="chartjs-render-monitor"></canvas>
+			    </div>
+			</div>
+
+			<div class="card">
+				<p id="title"> Operation</p>
+
+			    <div class="graph">
+			    	<canvas id="StatusChart" class="chartjs-render-monitor"></canvas>
+			    </div>
+			</div>
+		</div>
+
+	</div>
 
 
   <script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-app.js"></script>

@@ -14,11 +14,16 @@
 html {
   color: #222;
   font-size: 1em;
-  line-height: 1.15;
+  line-height: 1.0;
 }
 
 body { 
   background: #D1D5D8; 
+}
+
+HR.horizontaldivider {
+    background-color: #BBC1CB;
+    height: 1px;
 }
 
 H1.centerheader {
@@ -29,11 +34,23 @@ H1.centerheader {
     color: #BBC1CB;
 }
 
-DIV.rcorners {
+DIV.right {
+  height: 100%;
+  width: 65%;
+}
+
+DIV.left {
+  height: 100%;
+  width: 25%;
+}
+
+DIV.card {
+  font-family: 'Helvetica Neue';
+  color: #BBC1CB;
   border-radius: 15px;
   background: #484F5D;
-  padding: 20px;
-  margin: 30px;
+  padding: 15px;
+  margin: 10px;
 }
 
 DIV.graph {
@@ -42,18 +59,67 @@ DIV.graph {
   margin-right: auto;
 }
 
+#container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+}
+
+#title{
+  font-size: 20px;
+}
+
 #WeatherChart {
   display: block;
-  height: 350px;
-  width: 399px;
+  height: 100%;
+  width: 100%;
 }
 
 #StatusChart {
   display: block;
-  height: 350px;
-  width: 399px;
+  height: 100%;
+  width: 100%;
 }
 
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropbtn {
+  background-color: #676E7A;
+  color: #BBC1CB;
+  padding: 10px;
+  min-width: 160px;
+  /*font-size: 14px;*/
+  border: none;
+  cursor: pointer;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #f9f9f9;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+.dropdown-content a {
+  color: black;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+}
+
+.dropdown-content a:hover {background-color: #f1f1f1}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown:hover .dropbtn {
+  background-color: #828693;
 
 
 /*
