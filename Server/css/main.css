@@ -14,8 +14,47 @@
 html {
   color: #222;
   font-size: 1em;
-  line-height: 1.4;
+  line-height: 1.15;
 }
+
+body { 
+  background: #D1D5D8; 
+}
+
+H1.centerheader {
+    font-family: 'Helvetica Neue';
+    margin-left: auto;
+    margin-right: auto;
+    width: 12em;
+    color: #BBC1CB;
+}
+
+DIV.rcorners {
+  border-radius: 15px;
+  background: #484F5D;
+  padding: 20px;
+  margin: 30px;
+}
+
+DIV.graph {
+  width: 80%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#WeatherChart {
+  display: block;
+  height: 350px;
+  width: 399px;
+}
+
+#StatusChart {
+  display: block;
+  height: 350px;
+  width: 399px;
+}
+
+
 
 /*
  * Remove text-shadow in selection highlight:

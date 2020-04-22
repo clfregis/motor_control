@@ -66,14 +66,18 @@ function drawGraphWeather(label, label_title, graph1, graph2) {
       datasets: [{
         label: "Temperature",
         labelString: "ºC",
-        borderColor: "#3e95cd",
+        borderColor: "#C6BD74",
+        backgroundColor: "#C6BD74",
+        borderWidth: 4,
         fill: false,
         data: graph1,
       },
       {
         label: "Humidity",
         labelString: "%",
-        borderColor: "#8e5ea2",
+        borderColor: "#84A6CC",
+        backgroundColor: "#84A6CC",
+        borderWidth: 4,
         fill: false,
         data: graph2,
       }]
@@ -88,15 +92,34 @@ function drawGraphWeather(label, label_title, graph1, graph2) {
       stacked: true,
       title: {
         display: true,
-        text: 'Weather Station'
+        text: 'Weather Station',
+        fontSize: 22,
+        fontColor: '#BBC1CB',
+        fontFamily: 'Helvetica Neue',
       },
+      legend: {
+            display: true,
+            labels: {
+                fontSize: 14,
+                fontColor: '#BBC1CB',
+                fontFamily: 'Helvetica Neue',
+            }
+        },
 
       scales: {
         xAxes: [{
           display: true,
+          ticks: {
+            fontSize: 14,
+            fontColor: '#BBC1CB',
+            fontFamily: 'Helvetica Neue',
+          },
           scaleLabel: {
             display: true,
-            labelString: label_title
+            labelString: label_title,
+            fontSize: 18,
+            fontColor: '#BBC1CB',
+            fontFamily: 'Helvetica Neue',
           }
         }],
         yAxes: [{
@@ -105,11 +128,17 @@ function drawGraphWeather(label, label_title, graph1, graph2) {
           position: "left",
           ticks: {
             beginAtZero: true,
-            suggestedMax: 50
+            suggestedMax: 50,
+            fontSize: 14,
+            fontColor: '#BBC1CB',
+            fontFamily: 'Helvetica Neue',
           },
           scaleLabel: {
             display: true,
-            labelString: 'Value'
+            labelString: 'Value',
+            fontSize: 18,
+            fontColor: '#BBC1CB',
+            fontFamily: 'Helvetica Neue',
           }
         }],
       }
@@ -127,8 +156,9 @@ function drawGraphStatus(label, label_title, graph1) {
       labels: label,
       datasets: [{
         label: "Status",
-        borderColor: 'rgb(0, 99, 132)',
-        backgroundColor: 'rgb(0, 99, 132)',
+        borderColor: '#689167',
+        backgroundColor: '#689167',
+        borderWidth: 4,
         lineTension: 0,
         fill: false,
         data: graph1,
@@ -141,15 +171,34 @@ function drawGraphStatus(label, label_title, graph1) {
       stacked: false,
       title: {
         display: true,
-        text: 'Operation'
+        text: 'Operation',
+        fontSize: 22,
+        fontColor: '#BBC1CB',
+        fontFamily: 'Helvetica Neue',
       },
+      legend: {
+            display: true,
+            labels: {
+                fontSize: 14,
+                fontColor: '#BBC1CB',
+                fontFamily: 'Helvetica Neue',
+            }
+        },
 
       scales: {
         xAxes: [{
           display: true,
+          ticks: {
+            fontSize: 14,
+            fontColor: '#BBC1CB',
+            fontFamily: 'Helvetica Neue',
+          },
           scaleLabel: {
             display: true,
-            labelString: label_title
+            labelString: label_title,
+            fontSize: 18,
+            fontColor: '#BBC1CB',
+            fontFamily: 'Helvetica Neue',
           }
         }],
         yAxes: [{
@@ -159,11 +208,17 @@ function drawGraphStatus(label, label_title, graph1) {
           ticks: {
             beginAtZero: true,
             stepSize: 1,
-            Max: 1
+            Max: 1,
+            fontSize: 14,
+            fontColor: '#BBC1CB',
+            fontFamily: 'Helvetica Neue',
           },
           scaleLabel: {
             display: true,
-            labelString: 'Value'
+            labelString: 'Value',
+            fontSize: 18,
+            fontColor: '#BBC1CB',
+            fontFamily: 'Helvetica Neue',
           }
         }],
       }

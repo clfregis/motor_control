@@ -12,16 +12,11 @@
   </head>
 
 <body>
-  <div style="width:80%; padding: 10px;">
-    <!-- <h1>Real Time monitoring</h1> -->
+  <div class="rcorners">
+    <h1 class="centerheader">Real Time Monitoring</h1>
     <p id="status"></p>
     <!-- <p>Continuous operating time: 130s</p> -->
     <!-- <button type="button">Reset</button> -->
-  </div>
-
-
-  <!-- Add your site or application content here -->
-  <div style="width:80%;">
     <div class="chartjs-size-monitor">
       <div class="chartjs-size-monitor-expand">
         <div class=""></div>
@@ -30,20 +25,12 @@
         <div class=""></div>
       </div>
     </div>
-    <canvas id="WeatherChart" style="display: block; height: 350px; width: 399px;" width="798" height="398" class="chartjs-render-monitor"></canvas>
-  </div>
-  <br>
-  <br>
-  <div style="width:80%;">
-    <div class="chartjs-size-monitor">
-      <div class="chartjs-size-monitor-expand">
-        <div class=""></div>
-      </div>
-      <div class="chartjs-size-monitor-shrink">
-        <div class=""></div>
-      </div>
+    <div class="graph">
+    	<canvas id="WeatherChart" width="798" height="398" class="chartjs-render-monitor"></canvas>
     </div>
-    <canvas id="StatusChart" style="display: block; height: 359px; width: 399px;" width="798" height="398" class="chartjs-render-monitor"></canvas>
+    <div class="graph">
+    	<canvas id="StatusChart" width="798" height="398" class="chartjs-render-monitor"></canvas>
+    </div>
   </div>
 
 
