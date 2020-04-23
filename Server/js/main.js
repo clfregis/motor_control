@@ -1,6 +1,10 @@
 var temp = [], hum = [], time = [], state = [], xlabel = [];
 var status = 'OFF';
-
+var yStatusLabels = {
+	0 : 'Stopped',
+  1 : 'Operating',
+  2 : 'Stopped',
+}
 
 var firebaseConfig = {
     apiKey: "AIzaSyA-fPrOStfPGq-Ze_wW3mloB-Qo2AhgU8c",
@@ -28,7 +32,6 @@ database.on('value', function(snapshot) {
         hum.push(snap[i][n]);
       }
       if (n=='Time'){
-        console.log(snap[i][n])
         const tmp1 = snap[i][n].split(' ');
         const tmp2 = snap[i][n].split('');
         xlabel.push(tmp1[0]+", "+tmp1[1]+" "+tmp1[2]+" "+tmp1[4]);
@@ -39,15 +42,21 @@ database.on('value', function(snapshot) {
       }
     }
   }
-  temp = temp.slice(-10, temp.length);
-  hum = hum.slice(-10, hum.length);
-  time = time.slice(-10, time.lenght);
-  state = state.slice(-10, state.lenght);
+  let current_temp = temp[temp.length - 1];
+  temp = temp.slice(-12, temp.length);
+  let current_hum = hum[hum.length - 1];
+  hum = hum.slice(-12, hum.length);
+  let current_time = time[time.length - 1];
+  time = time.slice(-12, time.lenght);
+  let current_state = state[state.length - 1];
+  state = state.slice(-12, state.lenght);
+  let current_xlabel = xlabel[xlabel.length - 1];
+  xlabel = xlabel.slice(-12, xlabel.length);
 
-  if (state[9]==1){
+  if (current_state==1){
     status='Operating';
   }
-  else if (state[9]==0){
+  else if (current_state==0){
     status='Stopped';
   }
   else{
@@ -55,13 +64,13 @@ database.on('value', function(snapshot) {
   }
 
   document.getElementById("status").innerHTML = "Status: " + status;
-
-  drawTemperature(time, xlabel[0], temp);
-  drawHumidity(time, xlabel[0], hum);
-  drawGraphStatus(time, xlabel[0], state);
+  document.getElementById("currentTemperature").innerHTML = "Temperature: " + current_temp + "ºC";
+  document.getElementById("currentHumidity").innerHTML = "Humidity: " + current_hum + "%";
+  drawTemperature(time, current_xlabel, temp);
+  drawHumidity(time, current_xlabel, hum);
+  drawGraphStatus(time, current_xlabel, state);
 });
 
-      
 
 function drawTemperature(label, label_title, graph) {
   var ctx = document.getElementById("Temperature").getContext('2d');
@@ -71,7 +80,7 @@ function drawTemperature(label, label_title, graph) {
       labels: label,
       datasets: [{
         label: "Temperature",
-        //labelString: "ºC",
+        labelString: "ºC",
         borderColor: "#C6BD74",
         backgroundColor: "#C6BD74",
         borderWidth: 4,
@@ -82,7 +91,7 @@ function drawTemperature(label, label_title, graph) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      aspectRatio: 1.8,
+      aspectRatio: 1,
       hoverMode: 'index',
       stacked: false,
       title: {
@@ -123,10 +132,10 @@ function drawTemperature(label, label_title, graph) {
             zeroLineColor: '#676E7A',
           },
           ticks: {
-            beginAtZero: false,
-            stepSize: .5,
-            Max: 100,
-            Min: 0,
+            beginAtZero: true,
+            stepSize: 1,
+            Max: 50,
+            suggestedMax: 45,
             fontSize: 14,
             fontColor: '#BBC1CB',
             fontFamily: 'Helvetica Neue',
@@ -152,7 +161,7 @@ function drawHumidity(label, label_title, graph) {
       labels: label,
       datasets: [{
         label: "Humidity",
-        //labelString: "%",
+        labelString: "%",
         borderColor: "#84A6CC",
         backgroundColor: "#84A6CC",
         borderWidth: 4,
@@ -163,7 +172,7 @@ function drawHumidity(label, label_title, graph) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      aspectRatio: 1.8,
+      aspectRatio: 1,
       hoverMode: 'index',
       stacked: false,
       title: {
@@ -204,9 +213,10 @@ function drawHumidity(label, label_title, graph) {
             zeroLineColor: '#676E7A',
           },
           ticks: {
-            beginAtZero: false,
-            stepSize: .5,
+            beginAtZero: true,
+            stepSize: 1,
             Max: 100,
+            suggestedMax: 100,
             Min: 0,
             fontSize: 14,
             fontColor: '#BBC1CB',
@@ -240,12 +250,13 @@ function drawGraphStatus(label, label_title, graph1) {
         lineTension: 0,
         fill: false,
         data: graph1,
+        steppedLine: true,
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      aspectRatio: 1.8,
+      aspectRatio: 1,
       hoverMode: 'index',
       stacked: false,
       title: {
@@ -292,13 +303,12 @@ function drawGraphStatus(label, label_title, graph1) {
             fontSize: 14,
             fontColor: '#BBC1CB',
             fontFamily: 'Helvetica Neue',
+            callback: function(value, index, values) {
+              return yStatusLabels[value];
+            }
           },
           scaleLabel: {
-            display: true,
-            labelString: 'Value',
-            fontSize: 18,
-            fontColor: '#BBC1CB',
-            fontFamily: 'Helvetica Neue',
+            display: false
           }
         }],
       }

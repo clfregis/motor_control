@@ -1,0 +1,122 @@
+/* Amazing tutorial about flex
+https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
+
+.dashboard {
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+}
+
+.lateralBar {
+    width: 50px;
+    height: 100%;
+    background-color: #252930;
+    position: fixed;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.page {
+    margin-left: 50px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+}
+
+.right {
+    height: 100%;
+    width: 75%;
+}
+  
+.left {
+    height: 100%;
+    width: 25%;
+}
+
+/* Style buttons */
+.btn {
+    background-color: #484f5d; /* Blue background */
+    border: none; /* Remove borders */
+    color: white; /* White text */
+    width: 100%;
+    padding: 12px 16px; /* Some padding */
+    font-size: 15px; /* Set a font size */
+    cursor: pointer; /* Mouse pointer on hover */
+  }
+  
+  /* Background on mouse-over */
+.btn:hover {
+    background-color:#817e7d;
+}
+
+.card {
+    font-family: 'Helvetica Neue';
+    line-height: 1.5;
+    color: #BBC1CB;
+    border-radius: 12px;
+    background: #484F5D;
+    padding: 12px;
+    margin: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.card_title{
+    font-size: 22px;
+    width: 80%;
+    padding: 8px 8px;
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    flex-direction: row;
+}
+.icon_title{
+    width: 10%;
+    padding: 5px 0px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.text_title {
+    width: 80%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.graph {
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.dropdown {
+    position: relative;
+    display: inline-block;
+    font-family: 'Helvetica Neue';
+}
+  
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+}
+  
+.dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+}
+  
+.dropdown-content a:hover {background-color: #f1f1f1}
+  
+.dropdown:hover .dropdown-content {
+    display: block;
+}
