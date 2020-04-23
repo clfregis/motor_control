@@ -1,5 +1,7 @@
-var temp = [], hum = [], time = [], state = [], xlabel = [];
+var temp = [], hum = [], time = [], state = [], xlabel = [], daily = [], continuous = [];
 var status = 'OFF';
+var motor_label = 'motor_2';
+var current_motor = 'Motor 1';
 var yStatusLabels = {
 	0 : 'Stopped',
   1 : 'Operating',
@@ -20,7 +22,7 @@ var firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 // Get a reference to the database service
-var database = firebase.database().ref("motor_2");
+var database = firebase.database().ref(motor_label);
 database.on('value', function(snapshot) {
   let snap = snapshot.val(); // vai ter todo o objeto
   for (i in snap){ // vai iterar em cada key
@@ -40,6 +42,12 @@ database.on('value', function(snapshot) {
       if (n=='Status'){
         state.push(snap[i][n]);
       }
+      if (n=='Daily'){
+        daily.push(snap[i][n]);
+      }
+      if (n=='Continuous'){
+        continuous.push(snap[i][n]);
+      }
     }
   }
   let current_temp = temp[temp.length - 1];
@@ -52,6 +60,10 @@ database.on('value', function(snapshot) {
   state = state.slice(-12, state.lenght);
   let current_xlabel = xlabel[xlabel.length - 1];
   xlabel = xlabel.slice(-12, xlabel.length);
+  let current_daily = daily[daily.length - 1];
+  daily = daily.slice(-12, daily.length);
+  let current_continuous = continuous[continuous.length - 1];
+  continuous = continuous.slice(-12), daily.length;
 
   if (current_state==1){
     status='Operating';
@@ -63,9 +75,23 @@ database.on('value', function(snapshot) {
     status='Halted';
   }
 
+  if (motor_label=='motor_1'){
+    current_motor = 'Motor 1';
+  }
+  else if (motor_label=='motor_2'){
+    current_motor = 'Motor 2';
+  }
+  else if (motor_label=='motor_3'){
+    current_motor = 'Motor 3';
+  }
+
   document.getElementById("status").innerHTML = "Status: " + status;
+  document.getElementById("nameMotor").innerHTML = "Name: " + current_motor;
   document.getElementById("currentTemperature").innerHTML = "Temperature: " + current_temp + "ºC";
   document.getElementById("currentHumidity").innerHTML = "Humidity: " + current_hum + "%";
+  document.getElementById("dailyOperation").innerHTML = "Daily: " + current_daily;
+  document.getElementById("continuousOperation").innerHTML = "Continuous: " + current_continuous;
+
   drawTemperature(time, current_xlabel, temp);
   drawHumidity(time, current_xlabel, hum);
   drawGraphStatus(time, current_xlabel, state);
