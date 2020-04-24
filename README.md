@@ -28,3 +28,20 @@ When the running time of the motor is greater than a sp time, it turns on the LE
  - WiFi connection
  - Updating time from SNTP server
  - Motor and environment gathering information
+ - Sending data in a formatted way to firebase database
+
+## Some functions and operations
+
++ **Updating time locally**
+
+Every time we have to know what time is it, we need to do some calls, as shown below:
+
+1. Call `time()` function.
+	+ Description: The time() function is defined in time.h (ctime in C++) header file. This function returns the time since 00:00:00 UTC, January 1, 1970 (Unix timestamp) in seconds. If second is not a null pointer, the returned value is also stored in the object pointed to by second.
+	+ Syntax: `time_t time( time_t *second );`
+	+ Parameter: This function accepts single parameter second. This parameter is used to set the time_t object which store the time.
+
+	Then, what we do, is defining an universal `time_t` object named `now_clock`, thus, once we need to know what time is it we just call: `time(&now_clock);` Then, now_clock holds time universally.
+
+	However, as stated before, this `now_clock` variable will hold a UNIX timestamp format, which is not human readable. Also, it is the hour in GMT time, thus we need to adjust both things: Transform to human readable format and fix the timezone.
+

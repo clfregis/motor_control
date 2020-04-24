@@ -90,14 +90,13 @@ static xQueueHandle gpio_evt_queue = NULL;
 static const char *TAG = "LwIP SNTP";
 const int CONNECTED_BIT = BIT0;
 static const char *TAG_1 = "http-request";
-static const char *motor_address = "motor_2";
+static const char *motor_address = "motor_3";
 static const char *firebase_address = "esp32-66ba5.firebaseio.com";
 
 //==========================
 // Function definitions
 //==========================
 static void obtain_time(void);
-static void initialize_sntp(void);
 static void wifi_connection_start(void);
 static void wifi_connection_end(void);
 esp_err_t _http_event_handler(esp_http_client_event_t *evt);
@@ -372,7 +371,7 @@ void app_main() {
         ESP_LOGI(TAG, "Time is not set yet. Connecting to WiFi and getting time over NTP.");
         obtain_time();
         // update 'now' variable with current time
-        //time(&now); Already done inside obtain_time
+        time(&now); //Already done inside obtain_time
         time(&last_time_on);
         time(&last_time_off);
     }
@@ -445,9 +444,16 @@ void app_main() {
 //==========================
 static void obtain_time(void) {
 
-    initialize_sntp();
+    ESP_LOGI(TAG, "Initializing SNTP");
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    sntp_setservername(0, "pool.ntp.org");
+    sntp_setservername(1, "europe.pool.ntp.org");
+    sntp_setservername(2, "uk.pool.ntp.org ");
+    sntp_setservername(3, "us.pool.ntp.org");
+    sntp_setservername(4, "time1.google.com");
+    sntp_set_time_sync_notification_cb(time_sync_notification_cb);
+    sntp_init();
 
-    // wait for time to be set
     time_t now = 0;
     struct tm timeinfo = { 0 };
     int retry = 0;
@@ -474,17 +480,6 @@ static void wifi_connection_start(void){
 
 static void wifi_connection_end(void){
     ESP_ERROR_CHECK( example_disconnect() );
-}
-
-static void initialize_sntp(void) {
-    ESP_LOGI(TAG, "Initializing SNTP");
-    sntp_setoperatingmode(SNTP_OPMODE_POLL);
-    sntp_setservername(0, "pool.ntp.org");
-    sntp_set_time_sync_notification_cb(time_sync_notification_cb);
-#ifdef CONFIG_SNTP_TIME_SYNC_METHOD_SMOOTH
-    sntp_set_sync_mode(SNTP_SYNC_MODE_SMOOTH);
-#endif
-    sntp_init();
 }
 
 // When hardware interrupts occurs on the pre-determined pin, it calls this functions which inserts and event on the queue
