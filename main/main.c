@@ -84,19 +84,18 @@
 
 // Create a global variable of type xQueueHandle, which is the type we need to reference a FreeRTOS queue.
 static xQueueHandle gpio_evt_queue = NULL;
-// (Deprecated) Update time of motor status in milliseconds
-//static uint8_t motor_update_status_msec = 1000;
-
 static const char *TAG = "LwIP SNTP";
-const int CONNECTED_BIT = BIT0;
-static const char *TAG_1 = "http-request";
+static const char *TAG_1 = "HTTP Request";
+
 static const char *motor_address = "motor_3";
 static const char *firebase_address = "esp32-66ba5.firebaseio.com";
 
 //==========================
 // Function definitions
 //==========================
-static void obtain_time(void);
+static void update_sntp_time(void);
+void time_sync_notification_cb(struct timeval *tv);
+static void obtain_time(time_t *local_now, struct tm *local_timeinfo);
 static void wifi_connection_start(void);
 static void wifi_connection_end(void);
 esp_err_t _http_event_handler(esp_http_client_event_t *evt);
@@ -116,9 +115,9 @@ uint8_t humidity = 0;
 uint8_t motor_status = 1; // It starts on
 time_t running_time = 0;
 time_t continuous_running_time = 0;
-time_t last_time_off = 0;
-time_t last_time_on = 0;
-time_t now_clock = 0;
+
+time_t now;
+struct tm timeinfo;
 
 //==========================
 // End Variable definitions
@@ -140,15 +139,12 @@ void motor_control_task(void* arg) {
                 // Turn on the motor
                 gpio_set_level(GPIO_OUTPUT_IO_0, 1);
                 motor_status = 1;
-                time(&last_time_on);
-
             }
             else {
                 //printf("Borda de descida\n");
                 // Turn off the motor
                 gpio_set_level(GPIO_OUTPUT_IO_0, 0);
                 motor_status = 0;
-                time(&last_time_off);
             }
         }
     }
@@ -169,39 +165,24 @@ void temperature_humidity_task(void *arg) {
 
 }
 
-void time_sync_notification_cb(struct timeval *tv) {
-    ESP_LOGI(TAG, "Notification of a time synchronization event");
-}
-
 // Task that maintain and configure the time and date 
 void clock_task(void *arg) {
-    struct tm timeinfo_clock;
     char strftime_buf_clock[64];
-    
 
 	while(1){
         // Wait an entire day to update the time
         vTaskDelay(86400000/portTICK_RATE_MS);
 
 		ESP_LOGI(TAG, "Correct the drift, daily");
-        obtain_time();
-        // update 'now' variable with current time
-        time(&now_clock);
-
-        // Set timezone to Region and print local time
-        setenv("TZ", "<-03>3", 1);
-        tzset();
-        localtime_r(&now_clock, &timeinfo_clock);
-        strftime(strftime_buf_clock, sizeof(strftime_buf_clock), "%c", &timeinfo_clock);
-        ESP_LOGI(TAG, "The current date/time in Brazil is: %s", strftime_buf_clock);
+        update_sntp_time();
+        obtain_time(&now, &timeinfo);
 	}
 }
 
 // Task that supervise the motor, time operation and status
 // To implement: Create a local buffer that gather information each second and clears it upon uploading to weberver
 void motor_supervisor_task(void *arg) {
-	struct tm timeinfo_motor;
-    char strftime_buf_motor[26];
+    //char strftime_buf_motor[26];
 
 	while(1){
 
@@ -219,14 +200,6 @@ void motor_supervisor_task(void *arg) {
 		//printf("Running Time            = %ld seconds\n", running_time);
 		//printf("Continuous Running Time = %ld seconds\n", continuous_running_time);
 
-        localtime_r(&last_time_off, &timeinfo_motor);
-        strftime(strftime_buf_motor, sizeof(strftime_buf_motor), "%c", &timeinfo_motor);
-		//printf("Last Turn Off Time      = %s\n", strftime_buf_motor);
-		
-		localtime_r(&last_time_on, &timeinfo_motor);
-        strftime(strftime_buf_motor, sizeof(strftime_buf_motor), "%c", &timeinfo_motor);
-		//printf("Last Turn On Time       = %s\n", strftime_buf_motor);
-
         //printf("Temperature             = %d ºC\n", temperature);
         //printf("Humidity                = %d %%\n", humidity);
         //printf("Status code is %d\n", DHT11_read().status);
@@ -243,17 +216,13 @@ void database_task(void *pvParameters){
     char url[62];
     char data[100]; //  { "Temperature" : 28, "Humidity" : "78", "Status" : "ON", "Time" : "14 Apr 2020 08:02:21" }
     int size;
-    struct tm timeinfo;
     char strftime_db[26];
 
     // Wait for for the first update
     vTaskDelay(20000/portTICK_RATE_MS);
 
     while(1){
-        time(&now_clock);
-        setenv("TZ", "<-03>3", 1);
-        tzset();
-        localtime_r(&now_clock, &timeinfo);
+        obtain_time(&now, &timeinfo);
         strftime(strftime_db, sizeof(strftime_db), "%c", &timeinfo);
 
         size = sprintf (data, "{ \"Temperature\" : %d, \"Humidity\" : %d, \"Status\" : %d, \"Time\" : \"%s\" }", temperature, humidity, motor_status, strftime_db);
@@ -362,39 +331,18 @@ void app_main() {
     // RTC configuration
     //=============================
 
-    time_t now;
-    struct tm timeinfo;
-    time(&now);
-    localtime_r(&now, &timeinfo);
+    // Set timezone to Region
+    setenv("TZ", "<-03>3", 1);
+    // Apply
+    tzset();
+
+    obtain_time(&now, &timeinfo);
+
     // Is time set? If not, tm_year will be (1970 - 1900).
     if (timeinfo.tm_year < (2020 - 1900)) {
         ESP_LOGI(TAG, "Time is not set yet. Connecting to WiFi and getting time over NTP.");
-        obtain_time();
-        // update 'now' variable with current time
-        time(&now); //Already done inside obtain_time
-        time(&last_time_on);
-        time(&last_time_off);
-    }
-
-    char strftime_buf[64];
-
-    // Set timezone to Region and print local time
-    setenv("TZ", "<-03>3", 1);
-    tzset();
-    localtime_r(&now, &timeinfo);
-    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-    ESP_LOGI(TAG, "The current date/time in Brazil is: %s", strftime_buf);
-
-    if (sntp_get_sync_mode() == SNTP_SYNC_MODE_SMOOTH) {
-        struct timeval outdelta;
-        while (sntp_get_sync_status() == SNTP_SYNC_STATUS_IN_PROGRESS) {
-            adjtime(NULL, &outdelta);
-            ESP_LOGI(TAG, "Waiting for adjusting time ... outdelta = %li sec: %li ms: %li us",
-                        outdelta.tv_sec,
-                        outdelta.tv_usec/1000,
-                        outdelta.tv_usec%1000);
-            vTaskDelay(2000 / portTICK_PERIOD_MS);
-        }
+        update_sntp_time();
+        obtain_time(&now, &timeinfo);
     }
 
     //=============================
@@ -442,7 +390,7 @@ void app_main() {
 //==========================
 // Functions
 //==========================
-static void obtain_time(void) {
+static void update_sntp_time(void) {
 
     ESP_LOGI(TAG, "Initializing SNTP");
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
@@ -454,16 +402,34 @@ static void obtain_time(void) {
     sntp_set_time_sync_notification_cb(time_sync_notification_cb);
     sntp_init();
 
-    time_t now = 0;
-    struct tm timeinfo = { 0 };
     int retry = 0;
     const int retry_count = 30;
+    // Hide in the deep of the documentation, we found that inside sntp_get_sync_status
+    // When connected and getting the time information
+    // There is a function called adjtime(), which updates the system time
+    // Then, when we call time(), it gets the updated system time.
     while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count) {
         ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
-    time(&now);
-    localtime_r(&now, &timeinfo);
+}
+
+void time_sync_notification_cb(struct timeval *tv) {
+    ESP_LOGI(TAG, "Notification of a time synchronization event");
+}
+
+static void obtain_time(time_t *local_now, struct tm *local_timeinfo){
+    // For debug, to show in terminal the update time
+    char strftime_buf[64];
+
+    // Store in `now` the UNIX timestamp
+    time(local_now);
+    // Store in `timeinfo` a human readable format
+    localtime_r(local_now, local_timeinfo);
+
+    // Print local time (Debug Only)
+    strftime(strftime_buf, sizeof(strftime_buf), "%c", local_timeinfo);
+    ESP_LOGI(TAG, "The current date/time in Brazil is: %s", strftime_buf);
 }
 
 static void wifi_connection_start(void){
