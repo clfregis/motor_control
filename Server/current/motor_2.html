@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Dashboard of motors">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="css/all.css">
+    <link rel="stylesheet" href="plugins/fontawesome/css/all.min.css">
+    <title>Motor Control Dashboard</title>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="lateralBar">
+            <button onclick="document.location = 'index.html'" class="btn"><i class="fa fa-home"></i></button>
+            <button class="btn"><i class="fas fa-calendar-day"></i></button>
+            <div class="dropdown">
+                <button class="btn"><i class="fas fa-history"></i></button>
+                <div class="dropdown-content">
+                    <a id="motor_label" href="motor_1.html">Motor 1</a>
+                    <a id="motor_label" href="motor_2.html">Motor 2</a>
+                    <a id="motor_label" href="motor_3.html">Motor 3</a>
+                </div>
+            </div>
+        </div>
+        <p id="motorLabel">motor_2</p>
+        <div class="page">
+            <div class="left">
+                <div class="card">
+                    <div class="card_title">
+                        <div class="icon_title">
+                            <i class="far fa-file-alt"></i>
+                        </div>
+                        <div class="text_title">
+                            <p>Summary</p>
+                        </div>
+                    </div>
+                    <p id="nameMotor">Name: </p>
+                    <p id="status">Status: </p>
+                    <p id="currentTemperature">Temperature: </p>
+                    <p id="currentHumidity">Humidity:</p>
+                    <p id="lastUpdate">Last Update:</p>
+                </div>
+                <div class="card">
+                    <div class="card_title">
+                        <div class="icon_title">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="text_title">
+                            <p>Operation</p>
+                        </div>
+                    </div>
+                    <p id="dailyOperation">Daily: </p>
+                    <p id="continuousOperation">Continuous: </p>
+
+                </div>
+            </div>
+            <div class="right">
+                <div class="card">
+                    <div class="card_title">
+                        <div class="icon_title">
+                            <i class="fas fa-thermometer-three-quarters"></i>
+                        </div>
+                        <div class="text_title">
+                            <p>Temperature</p>
+                        </div>
+                    </div>
+                    <div class="graph">
+                        <canvas id="Temperature"></canvas>
+                    </div>
+                </div>
+    
+                <div class="card">
+                    <div class="card_title">
+                        <div class="icon_title">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <div class="text_title">
+                            <p>Humidity</p>
+                        </div>
+                    </div>
+                    <div class="graph">
+                        <canvas id="Humidity"></canvas>
+                    </div>
+                </div>
+    
+                <div class="card">
+                    <div class="card_title">
+                        <div class="icon_title">
+                            <i class="fas fa-power-off"></i>
+                        </div>
+                        <div class="text_title">
+                            <p>Status</p>
+                        </div>
+                    </div>
+                    <div class="graph">
+                        <canvas id="StatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Deixa os scripts para serem carregados por ultimo -->
+    <!-- FontAwesome icon usage
+         <i class="fas fa-cloud"></i> Just copy and paste the icon from fas website-->
+    <script src="plugins/fontawesome/js/all.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-app.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-database.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
+    <script src="js/main.js"></script>
+
+</body>
+</html>
