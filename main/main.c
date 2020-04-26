@@ -80,14 +80,19 @@
 #define GPIO_DATA_0             4   // DHT11 Sensor on the final code, try to use a DHT22 library
 #define GPIO_INPUT_PIN_SEL      (1ULL<<GPIO_INPUT_IO_0)
 #define ESP_INTR_FLAG_DEFAULT   0
+#define DEBUG 					1
 
 
 // Create a global variable of type xQueueHandle, which is the type we need to reference a FreeRTOS queue.
 static xQueueHandle gpio_evt_queue = NULL;
-static const char *TAG = "LwIP SNTP";
-static const char *TAG_1 = "HTTP Request";
+#if DEBUG
+	static const char *TAG = "LwIP SNTP";
+	static const char *TAG_1 = "HTTP Request";
+	static const char *TAG_2 = "Sensor Reading";
+	static const char *TAG_3 = "Queue Creation";
+#endif
 
-static const char *motor_address = "motor_3";
+static const char *motor_address = "motor_2";
 static const char *firebase_address = "esp32-66ba5.firebaseio.com";
 
 //==========================
@@ -97,6 +102,7 @@ static void update_sntp_time(void);
 void time_sync_notification_cb(struct timeval *tv);
 static void obtain_time(time_t *local_now, struct tm *local_timeinfo);
 static void wifi_connection_start(void);
+static void wifi_connection_begin(void);
 static void wifi_connection_end(void);
 esp_err_t _http_event_handler(esp_http_client_event_t *evt);
 static void IRAM_ATTR gpio_isr_handler(void* arg);
@@ -153,12 +159,29 @@ void motor_control_task(void* arg) {
 // Task that gather the information of the temperature and humidity sensor
 void temperature_humidity_task(void *arg) {
     DHT11_init(GPIO_DATA_0);
+    int local_temperature, local_humidity;
+    int counter=0;
+    const int max_counter=50;
 
     while(1) {
     	// Update temperature
-    	temperature = DHT11_read().temperature;
+    	local_temperature = DHT11_read().temperature;
     	// Update humidity
-    	humidity = DHT11_read().humidity;
+    	local_humidity = DHT11_read().humidity;
+    	while((local_temperature>70 || local_humidity>100) && counter<max_counter){
+    		// Update temperature
+	    	local_temperature = DHT11_read().temperature;
+	    	// Update humidity
+	    	local_humidity = DHT11_read().humidity;
+	    	counter++;
+	    	#if DEBUG
+	    		ESP_LOGE(TAG_2, "Incorrect reading of weather, trying again... (%d/%d)", counter, max_counter);
+	    	#endif
+    	}
+
+		temperature=local_temperature;
+		humidity=local_humidity;
+		counter=0;
         // Wait 2 seconds for another update
         vTaskDelay(2000/portTICK_RATE_MS);
     }
@@ -167,15 +190,23 @@ void temperature_humidity_task(void *arg) {
 
 // Task that maintain and configure the time and date 
 void clock_task(void *arg) {
-    char strftime_buf_clock[64];
 
 	while(1){
-        // Wait an entire day to update the time
-        vTaskDelay(86400000/portTICK_RATE_MS);
+        // Every other second, check if is midnight
+        vTaskDelay(1000/portTICK_RATE_MS);
 
-		ESP_LOGI(TAG, "Correct the drift, daily");
-        update_sntp_time();
         obtain_time(&now, &timeinfo);
+
+        // Correct the drift every night at midnight
+        if (timeinfo.tm_hour==0 && timeinfo.tm_min==0 && timeinfo.tm_sec==0){
+        	#if DEBUG
+        		ESP_LOGI(TAG, "Correct the drift, daily");
+        	#endif
+	        update_sntp_time();
+	        obtain_time(&now, &timeinfo);
+	        running_time=0;
+	        continuous_running_time=0;
+        }
 	}
 }
 
@@ -197,14 +228,6 @@ void motor_supervisor_task(void *arg) {
 			continuous_running_time = 0;
 		}
 
-		//printf("Running Time            = %ld seconds\n", running_time);
-		//printf("Continuous Running Time = %ld seconds\n", continuous_running_time);
-
-        //printf("Temperature             = %d ºC\n", temperature);
-        //printf("Humidity                = %d %%\n", humidity);
-        //printf("Status code is %d\n", DHT11_read().status);
-        //printf("\n");
-
 		// Wait for another update
         vTaskDelay(1000/portTICK_RATE_MS);
 	}
@@ -214,7 +237,7 @@ void motor_supervisor_task(void *arg) {
 // for inside a while to update the buffer
 void database_task(void *pvParameters){
     char url[62];
-    char data[100]; //  { "Temperature" : 28, "Humidity" : "78", "Status" : "ON", "Time" : "14 Apr 2020 08:02:21" }
+    char data[147]; //  { "Temperature" : 28, "Humidity" : "78", "Status" : "ON", "Time" : "14 Apr 2020 08:02:21", "Daily" : 123455431 }
     int size;
     char strftime_db[26];
 
@@ -222,11 +245,15 @@ void database_task(void *pvParameters){
     vTaskDelay(20000/portTICK_RATE_MS);
 
     while(1){
+    	wifi_connection_start();
         obtain_time(&now, &timeinfo);
         strftime(strftime_db, sizeof(strftime_db), "%c", &timeinfo);
 
-        size = sprintf (data, "{ \"Temperature\" : %d, \"Humidity\" : %d, \"Status\" : %d, \"Time\" : \"%s\" }", temperature, humidity, motor_status, strftime_db);
+        size = sprintf (data,
+        		"{ \"Temperature\" : %d, \"Humidity\" : %d, \"Status\" : %d, \"Time\" : \"%s\", \"Daily\" : %ld, \"Continuous\" : %ld }",
+        		temperature, humidity, motor_status, strftime_db, running_time, continuous_running_time);
         sprintf(url, "https://%s/%s.json",firebase_address, motor_address);
+
 
         // ======================================
         // Start POST request
@@ -248,13 +275,22 @@ void database_task(void *pvParameters){
         // client_open will open the connection, write all header strings and return ESP_OK if all went well
         // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
         if (esp_http_client_open(client, size) == ESP_OK) {
-            ESP_LOGI(TAG_1, "Connection opened");
+        	#if DEBUG
+        		ESP_LOGI(TAG_1, "Connection opened");
+        	#endif
             esp_http_client_write(client, data, size);
             // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
             esp_http_client_fetch_headers(client);
             //ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
             if (esp_http_client_get_status_code(client)==200){
-                ESP_LOGI(TAG_1, "Message successfuly sent!");
+            	#if DEBUG
+                	ESP_LOGI(TAG_1, "Message successfuly sent!");
+                #endif
+            }
+            else {
+            	#if DEBUG
+            	   	ESP_LOGI(TAG_1, "Sending message failed!");
+            	#endif
             }
             //============
             // Debug, but, in the future, perform a verification that the message was sent
@@ -268,16 +304,19 @@ void database_task(void *pvParameters){
             esp_http_client_close(client);
         }
         else {
-            ESP_LOGE(TAG_1, "Connection failed");
+        	#if DEBUG
+        	    ESP_LOGE(TAG_1, "Connection failed");
+        	#endif
         }
         // ======================================
         // End of POST request
         // ======================================
 
         esp_http_client_cleanup(client);
+        wifi_connection_end();
 
-        // Wait for another update
-        vTaskDelay(600000/portTICK_RATE_MS);
+        // Wait for another update: 1 minute
+        vTaskDelay(60000/portTICK_RATE_MS);
 
     }
     
@@ -325,8 +364,8 @@ void app_main() {
     // End of GPIO configuration
     //=============================
 
-    wifi_connection_start();
-    
+    wifi_connection_begin();
+
     //=============================
     // RTC configuration
     //=============================
@@ -340,7 +379,9 @@ void app_main() {
 
     // Is time set? If not, tm_year will be (1970 - 1900).
     if (timeinfo.tm_year < (2020 - 1900)) {
-        ESP_LOGI(TAG, "Time is not set yet. Connecting to WiFi and getting time over NTP.");
+    	#if DEBUG
+    	    ESP_LOGI(TAG, "Time is not set yet. Connecting to WiFi and getting time over NTP.");
+    	#endif
         update_sntp_time();
         obtain_time(&now, &timeinfo);
     }
@@ -358,7 +399,9 @@ void app_main() {
     gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
 
     if(gpio_evt_queue == NULL) {
-        printf("Error creating the queue\n");
+    	#if DEBUG
+    		ESP_LOGE(TAG_3, "Error creating the queue");
+    	#endif
     }
 
     // Install gpio isr service
@@ -391,8 +434,11 @@ void app_main() {
 // Functions
 //==========================
 static void update_sntp_time(void) {
+	wifi_connection_start();
 
-    ESP_LOGI(TAG, "Initializing SNTP");
+	#if DEBUG
+		ESP_LOGI(TAG, "Initializing SNTP");
+	#endif
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
     sntp_setservername(0, "pool.ntp.org");
     sntp_setservername(1, "europe.pool.ntp.org");
@@ -409,35 +455,48 @@ static void update_sntp_time(void) {
     // There is a function called adjtime(), which updates the system time
     // Then, when we call time(), it gets the updated system time.
     while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count) {
-        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
+    	#if DEBUG
+    	    ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
+    	#endif
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
+    sntp_stop();
+    wifi_connection_end();
 }
 
 void time_sync_notification_cb(struct timeval *tv) {
-    ESP_LOGI(TAG, "Notification of a time synchronization event");
+	#if DEBUG
+		ESP_LOGI(TAG, "Notification of a time synchronization event");
+	#endif
 }
 
 static void obtain_time(time_t *local_now, struct tm *local_timeinfo){
-    // For debug, to show in terminal the update time
-    char strftime_buf[64];
+    #if DEBUG
+    	// For debug, to show in terminal the update time
+		char strftime_buf[64];
+	#endif
 
     // Store in `now` the UNIX timestamp
     time(local_now);
     // Store in `timeinfo` a human readable format
     localtime_r(local_now, local_timeinfo);
 
-    // Print local time (Debug Only)
-    strftime(strftime_buf, sizeof(strftime_buf), "%c", local_timeinfo);
-    ESP_LOGI(TAG, "The current date/time in Brazil is: %s", strftime_buf);
+    #if DEBUG
+	    // Print local time (Debug Only)
+	    strftime(strftime_buf, sizeof(strftime_buf), "%c", local_timeinfo);
+	    ESP_LOGI(TAG, "The current date/time in Brazil is: %s", strftime_buf);
+	#endif
 }
 
-static void wifi_connection_start(void){
+
+static void wifi_connection_begin(void){
     ESP_ERROR_CHECK( nvs_flash_init() );
     tcpip_adapter_init();
     ESP_ERROR_CHECK( esp_event_loop_create_default() );
+}
 
-    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
+static void wifi_connection_start(void){
+	/* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
      * Read "Establishing Wi-Fi or Ethernet Connection" section in
      * examples/protocols/README.md for more information about this function.
      */
@@ -457,36 +516,49 @@ static void IRAM_ATTR gpio_isr_handler(void* arg) {
 esp_err_t _http_event_handler(esp_http_client_event_t *evt) {
     switch(evt->event_id) {
         case HTTP_EVENT_ERROR:
-            ESP_LOGD(TAG_1, "HTTP_EVENT_ERROR");
+        	#if DEBUG
+                ESP_LOGD(TAG_1, "HTTP_EVENT_ERROR");
+            #endif
             break;
         case HTTP_EVENT_ON_CONNECTED:
-            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_CONNECTED");
+        	#if DEBUG
+                ESP_LOGD(TAG_1, "HTTP_EVENT_ON_CONNECTED");
+            #endif
             break;
         case HTTP_EVENT_HEADER_SENT:
-            ESP_LOGD(TAG_1, "HTTP_EVENT_HEADER_SENT");
+        	#if DEBUG
+            	ESP_LOGD(TAG_1, "HTTP_EVENT_HEADER_SENT");
+            #endif
             break;
         case HTTP_EVENT_ON_HEADER:
-            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
+        	#if DEBUG
+            	ESP_LOGD(TAG_1, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
+            #endif
             break;
         case HTTP_EVENT_ON_DATA:
-            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+        	#if DEBUG
+        	    ESP_LOGD(TAG_1, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+        	#endif
             if (!esp_http_client_is_chunked_response(evt->client)) {
                 // Write out data
                 // printf("%.*s", evt->data_len, (char*)evt->data);
             }
-
             break;
         case HTTP_EVENT_ON_FINISH:
-            ESP_LOGD(TAG_1, "HTTP_EVENT_ON_FINISH");
+        	#if DEBUG
+                ESP_LOGD(TAG_1, "HTTP_EVENT_ON_FINISH");
+            #endif
             break;
         case HTTP_EVENT_DISCONNECTED:
-            ESP_LOGI(TAG_1, "HTTP_EVENT_DISCONNECTED");
+        	#if DEBUG
+            	ESP_LOGI(TAG_1, "HTTP_EVENT_DISCONNECTED");
             int mbedtls_err = 0;
             esp_err_t err = esp_tls_get_and_clear_last_error(evt->data, &mbedtls_err, NULL);
             if (err != 0) {
-                ESP_LOGI(TAG_1, "Last esp error code: 0x%x", err);
-                ESP_LOGI(TAG_1, "Last mbedtls failure: 0x%x", mbedtls_err);
+        	    ESP_LOGI(TAG_1, "Last esp error code: 0x%x", err);
+            	ESP_LOGI(TAG_1, "Last mbedtls failure: 0x%x", mbedtls_err);
             }
+            #endif
             break;
     }
     return ESP_OK;

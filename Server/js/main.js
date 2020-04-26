@@ -43,10 +43,10 @@ database.on('value', function(snapshot) {
         state.push(snap[i][n]);
       }
       if (n=='Daily'){
-        daily.push(snap[i][n]);
+        daily.push(format_hour(snap[i][n]));
       }
       if (n=='Continuous'){
-        continuous.push(snap[i][n]);
+        continuous.push(format_hour(snap[i][n]));
       }
     }
   }
@@ -91,12 +91,19 @@ database.on('value', function(snapshot) {
   document.getElementById("currentHumidity").innerHTML = "Humidity: " + current_hum + "%";
   document.getElementById("dailyOperation").innerHTML = "Daily: " + current_daily;
   document.getElementById("continuousOperation").innerHTML = "Continuous: " + current_continuous;
+  document.getElementById("lastUpdate").innerHTML = "Last Update: " + current_time + ", " + current_xlabel;
 
   drawTemperature(time, current_xlabel, temp);
   drawHumidity(time, current_xlabel, hum);
   drawGraphStatus(time, current_xlabel, state);
 });
 
+function format_hour(seconds){
+  var date = new Date(null);
+  date.setSeconds(seconds); // specify value for SECONDS here
+  var result = date.toISOString().substr(11, 8);
+  return result;
+}
 
 function drawTemperature(label, label_title, graph) {
   var ctx = document.getElementById("Temperature").getContext('2d');
