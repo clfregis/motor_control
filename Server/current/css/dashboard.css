@@ -35,6 +35,16 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
     width: 25%;
 }
 
+.right_index {
+    height: 100%;
+    width: 75%;
+}
+  
+.left_index {
+    height: 100%;
+    width: 25%;
+}
+
 .banner {
     height: 100%;
     display: flex;
@@ -131,4 +141,97 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
 
 #motorLabel {
     display: none;
+}
+
+@media screen and (max-width:1311px){
+    .right {
+        width: 70%;
+    }
+      
+    .left {
+        width: 30%;
+    }
+}
+@media screen and (max-width:1105px){
+    .right {
+        width: 65%;
+    }
+      
+    .left {
+        width: 35%;
+    }
+}
+@media screen and (max-width:958px){
+    .right {
+        width: 60%;
+    }
+      
+    .left {
+        width: 40%;
+    }
+}
+@media screen and (max-width:840px){
+    .right {
+        width: 55%;
+    }
+      
+    .left {
+        width: 45%;
+    }
+}
+@media screen and (max-width:760px){
+    .right {
+        width: 100%;
+    }
+      
+    .left {
+        display: none;
+    }
+}
+
+
+@media screen and (max-width:1311px){
+    .right_index {
+        width: 70%;
+    }
+      
+    .left_index {
+        width: 30%;
+    }
+}
+@media screen and (max-width:1105px){
+    .right_index {
+        width: 65%;
+    }
+      
+    .left_index {
+        width: 35%;
+    }
+}
+@media screen and (max-width:958px){
+    .right_index {
+        width: 60%;
+    }
+      
+    .left_index {
+        width: 40%;
+    }
+}
+@media screen and (max-width:840px){
+    .right_index {
+        width: 55%;
+    }
+      
+    .left_index {
+        width: 45%;
+    }
+}
+@media screen and (max-width:760px){
+    .right_index {
+        display: none;
+    }
+      
+    .left_index {
+        width: 100%;
+    }
 }

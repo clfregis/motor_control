@@ -80,7 +80,7 @@
 #define GPIO_DATA_0             4   // DHT11 Sensor on the final code, try to use a DHT22 library
 #define GPIO_INPUT_PIN_SEL      (1ULL<<GPIO_INPUT_IO_0)
 #define ESP_INTR_FLAG_DEFAULT   0
-#define DEBUG 					1
+#define DEBUG 					0
 
 
 // Create a global variable of type xQueueHandle, which is the type we need to reference a FreeRTOS queue.
@@ -316,7 +316,7 @@ void database_task(void *pvParameters){
         wifi_connection_end();
 
         // Wait for another update: 1 minute
-        vTaskDelay(60000/portTICK_RATE_MS);
+        vTaskDelay(300000/portTICK_RATE_MS);
 
     }
     
