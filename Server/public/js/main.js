@@ -30,25 +30,25 @@ database.on('value', function(snapshot) {
   let snap = snapshot.val(); // vai ter todo o objeto
   for (i in snap){ // vai iterar em cada key
     for (n in snap[i]){
-      if (n=='Temperature'){
+      if (n=='T'){
         temp.push(snap[i][n]);
       }
-      if (n=='Humidity'){
+      if (n=='H'){
         hum.push(snap[i][n]);
       }
-      if (n=='Time'){
+      if (n=='D'){
         const tmp1 = snap[i][n].split(' ');
         const tmp2 = snap[i][n].split('');
         xlabel.push(tmp1[0]+", "+tmp1[1]+" "+tmp1[2]+" "+tmp1[4]);
         time.push(tmp2[11]+tmp2[12]+tmp2[13]+tmp2[14]+tmp2[15]);
       }
-      if (n=='Status'){
+      if (n=='S'){
         state.push(snap[i][n]);
       }
-      if (n=='Daily'){
+      if (n=='DO'){
         daily.push(format_hour(snap[i][n]));
       }
-      if (n=='Continuous'){
+      if (n=='CO'){
         continuous.push(format_hour(snap[i][n]));
       }
     }

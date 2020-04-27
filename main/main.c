@@ -88,11 +88,11 @@ static xQueueHandle gpio_evt_queue = NULL;
 #if DEBUG
 	static const char *TAG = "LwIP SNTP";
 	static const char *TAG_1 = "HTTP Request";
-	static const char *TAG_2 = "Sensor Reading";
+	static const char *TAG_2 = "Hour/Date";
 	static const char *TAG_3 = "Queue Creation";
 #endif
 
-static const char *motor_address = "motor_1";
+static const char *motor_address = "motor_3";
 static const char *firebase_address = "esp32-66ba5.firebaseio.com";
 
 //==========================
@@ -125,6 +125,13 @@ time_t continuous_running_time = 0;
 time_t now;
 struct tm timeinfo;
 
+char url[62];
+char bufferData[60][120]; //  { "T" : 28, "H" : "78", "S" : "ON", "D" : "14 Apr 2020 08:02:21", "DO" : 123455431, "CO" : 123578 }
+					// T=Temperature, H = Humidity, S=Status, D=Date, DO=Daily Operation, CO=Continuous Operation
+uint8_t bufferCounter=0;
+int size;
+char strftime_db[26];
+
 //==========================
 // End Variable definitions
 //==========================
@@ -156,38 +163,6 @@ void motor_control_task(void* arg) {
     }
 }
 
-// Task that gather the information of the temperature and humidity sensor
-void temperature_humidity_task(void *arg) {
-    DHT11_init(GPIO_DATA_0);
-    int local_temperature, local_humidity;
-    int counter=0;
-    const int max_counter=50;
-
-    while(1) {
-    	// Update temperature
-    	local_temperature = DHT11_read().temperature;
-    	// Update humidity
-    	local_humidity = DHT11_read().humidity;
-    	while((local_temperature>70 || local_humidity>100) && counter<max_counter){
-    		// Update temperature
-	    	local_temperature = DHT11_read().temperature;
-	    	// Update humidity
-	    	local_humidity = DHT11_read().humidity;
-	    	counter++;
-	    	#if DEBUG
-	    		ESP_LOGE(TAG_2, "Incorrect reading of weather, trying again... (%d/%d)", counter, max_counter);
-	    	#endif
-    	}
-
-		temperature=local_temperature;
-		humidity=local_humidity;
-		counter=0;
-        // Wait 2 seconds for another update
-        vTaskDelay(2000/portTICK_RATE_MS);
-    }
-
-}
-
 // Task that maintain and configure the time and date 
 void clock_task(void *arg) {
 
@@ -213,20 +188,44 @@ void clock_task(void *arg) {
 // Task that supervise the motor, time operation and status
 // To implement: Create a local buffer that gather information each second and clears it upon uploading to weberver
 void motor_supervisor_task(void *arg) {
-    //char strftime_buf_motor[26];
+    DHT11_init(GPIO_DATA_0);
+    uint8_t internalCounter=0;
+    uint8_t currentState=1;
+    uint8_t lastState=1;
 
 	while(1){
 
 		if (motor_status==1){
-			//printf("Motor Status            = ON\n");
-			// Update the operation time
+			// Update times
 			running_time += 1;
 			continuous_running_time += 1;
+			currentState=motor_status;
 		}
 		else {
-			//printf("Motor Status            = OFF\n");
+			// Clear times
 			continuous_running_time = 0;
+			currentState=motor_status;
 		}
+    	// Update temperature
+   		temperature = DHT11_read().temperature;
+    	// Update humidity
+    	humidity = DHT11_read().humidity;
+
+    	// Only store data if it is valid and if the motor changed its state
+    	if(temperature<=70 && humidity<=100 && (internalCounter==59 || currentState!=lastState)){
+    		// Reset internalCounter
+    		internalCounter=0;
+    		obtain_time(&now, &timeinfo);
+	        strftime(strftime_db, sizeof(strftime_db), "%c", &timeinfo);
+
+	        size = sprintf (bufferData[bufferCounter],
+	        		"{ \"T\" : %d, \"H\" : %d, \"S\" : %d, \"D\" : \"%s\", \"DO\" : %ld, \"CO\" : %ld }",
+	        		temperature, humidity, motor_status, strftime_db, running_time, continuous_running_time);
+	        bufferCounter++;
+	        lastState=currentState;
+	    }
+
+	    internalCounter++;
 
 		// Wait for another update
         vTaskDelay(1000/portTICK_RATE_MS);
@@ -236,87 +235,87 @@ void motor_supervisor_task(void *arg) {
 
 // for inside a while to update the buffer
 void database_task(void *pvParameters){
-    char url[62];
-    char data[147]; //  { "Temperature" : 28, "Humidity" : "78", "Status" : "ON", "Time" : "14 Apr 2020 08:02:21", "Daily" : 123455431 }
-    int size;
-    char strftime_db[26];
 
     // Wait for for the first update
     vTaskDelay(20000/portTICK_RATE_MS);
 
     while(1){
     	wifi_connection_start();
-        obtain_time(&now, &timeinfo);
-        strftime(strftime_db, sizeof(strftime_db), "%c", &timeinfo);
 
-        size = sprintf (data,
-        		"{ \"Temperature\" : %d, \"Humidity\" : %d, \"Status\" : %d, \"Time\" : \"%s\", \"Daily\" : %ld, \"Continuous\" : %ld }",
-        		temperature, humidity, motor_status, strftime_db, running_time, continuous_running_time);
-        sprintf(url, "https://%s/%s.json",firebase_address, motor_address);
+    	// bufferCounter is always 1 ahead of the number of data stored in buffer
+	    for(int i=0; i<bufferCounter; i++){
 
+	        // ======================================
+	        // Start POST request
+	        // ======================================
 
-        // ======================================
-        // Start POST request
-        // ======================================
+	        // Create url
+			sprintf(url, "https://%s/%s.json",firebase_address, motor_address);
 
-        // Struct which contains the HTTP configuration
-        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv424esp_http_client_config_t
-        esp_http_client_config_t config = {
-        .url = url,
-        .event_handler = _http_event_handler,
-        };
+	        // Struct which contains the HTTP configuration
+	        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv424esp_http_client_config_t
+	        esp_http_client_config_t config = {
+	        .url = url,
+	        .event_handler = _http_event_handler,
+	        };
 
-        // Call the client init passing the config struct to start a HTTP session
-        // It returns a esp_http_client_handle_t that you must use as input to other functions in the interface
-        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_initPK24esp_http_client_config_t
-        esp_http_client_handle_t client = esp_http_client_init(&config);
+	        // Call the client init passing the config struct to start a HTTP session
+	        // It returns a esp_http_client_handle_t that you must use as input to other functions in the interface
+	        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_initPK24esp_http_client_config_t
+	        esp_http_client_handle_t client = esp_http_client_init(&config);
 
-        esp_http_client_set_method(client, HTTP_METHOD_POST);
-        // client_open will open the connection, write all header strings and return ESP_OK if all went well
-        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
-        if (esp_http_client_open(client, size) == ESP_OK) {
-        	#if DEBUG
-        		ESP_LOGI(TAG_1, "Connection opened");
-        	#endif
-            esp_http_client_write(client, data, size);
-            // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
-            esp_http_client_fetch_headers(client);
-            //ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
-            if (esp_http_client_get_status_code(client)==200){
-            	#if DEBUG
-                	ESP_LOGI(TAG_1, "Message successfuly sent!");
-                #endif
-            }
-            else {
-            	#if DEBUG
-            	   	ESP_LOGI(TAG_1, "Sending message failed!");
-            	#endif
-            }
-            //============
-            // Debug, but, in the future, perform a verification that the message was sent
-            // char valor[77];
-            // // Read the stream of data
-            // esp_http_client_read(client, valor, 77);
-            // printf("%s\n",valor);
-            // Debug
-            //============
+	        esp_http_client_set_method(client, HTTP_METHOD_POST);
+	        // client_open will open the connection, write all header strings and return ESP_OK if all went well
+	        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
+	        if (esp_http_client_open(client, size) == ESP_OK) {
+	        	#if DEBUG
+	        		ESP_LOGI(TAG_1, "Connection opened");
+	        	#endif
+	            esp_http_client_write(client, bufferData[i], size);
+	            // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
+	            esp_http_client_fetch_headers(client);
+	            //ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
+	            if (esp_http_client_get_status_code(client)==200){
+	            	#if DEBUG
+	                	ESP_LOGI(TAG_1, "Message successfuly sent!");
+	                #endif
+	            }
+	            else {
+	            	#if DEBUG
+	            	   	ESP_LOGI(TAG_1, "Sending message failed!");
+	            	#endif
+	            }
+	            //============
+	            // Debug, but, in the future, perform a verification that the message was sent
+	            // char valor[77];
+	            // // Read the stream of data
+	            // esp_http_client_read(client, valor, 77);
+	            // printf("%s\n",valor);
+	            // Debug
+	            //============
 
-            esp_http_client_close(client);
-        }
-        else {
-        	#if DEBUG
-        	    ESP_LOGE(TAG_1, "Connection failed");
-        	#endif
-        }
-        // ======================================
-        // End of POST request
-        // ======================================
+	            esp_http_client_close(client);
+	        }
+	        else {
+	        	#if DEBUG
+	        	    ESP_LOGE(TAG_1, "Connection failed");
+	        	#endif
+	        }
+	        // ======================================
+	        // End of POST request
+	        // ======================================
 
-        esp_http_client_cleanup(client);
+	        esp_http_client_cleanup(client);
+	        vTaskDelay(10/portTICK_RATE_MS);
+    	}
+
+    	// Reset bufferCounter
+    	bufferCounter=0;
+    	// Clean buffer? I don't think so, we overwrite old data
         wifi_connection_end();
 
         // Wait for another update: 1 minute
-        vTaskDelay(300000/portTICK_RATE_MS);
+        vTaskDelay(60000/portTICK_RATE_MS);
 
     }
     
@@ -414,15 +413,13 @@ void app_main() {
     //=============================
 
     // Start motor supervisor task
-    xTaskCreate(motor_control_task, "motor_control_task", 2048, NULL, 1, NULL);
-    // Start sensor task
-    xTaskCreate(&temperature_humidity_task, "temperature_humidity_task", 2048, NULL, 5, NULL);
-    // Start clock task
-    xTaskCreate(&clock_task, "clock_task", 3072, NULL, 5, NULL);
+    xTaskCreate(motor_control_task, "motor_control_task", 2048, NULL, 4, NULL);
     // Start motor supervisor task
-    xTaskCreate(&motor_supervisor_task, "motor_supervisor_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&motor_supervisor_task, "motor_supervisor_task", 2048, NULL, 3, NULL);
     // Start the database task
-    xTaskCreate(&database_task, "database_task", 4096, NULL, 5, NULL);
+    xTaskCreate(&database_task, "database_task", 4096, NULL, 2, NULL);
+    // Start clock task
+    xTaskCreate(&clock_task, "clock_task", 3072, NULL, 1, NULL);
 
     //=============================
     // End of Tasks initializations
@@ -484,7 +481,7 @@ static void obtain_time(time_t *local_now, struct tm *local_timeinfo){
     #if DEBUG
 	    // Print local time (Debug Only)
 	    strftime(strftime_buf, sizeof(strftime_buf), "%c", local_timeinfo);
-	    ESP_LOGI(TAG, "The current date/time in Brazil is: %s", strftime_buf);
+	    ESP_LOGI(TAG_2, "The current date/time in Brazil is: %s", strftime_buf);
 	#endif
 }
 

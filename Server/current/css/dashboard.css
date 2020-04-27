@@ -143,7 +143,7 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
     display: none;
 }
 
-@media screen and (max-width:1311px){
+@media screen and (max-width:1412px){
     .right {
         width: 70%;
     }
@@ -152,7 +152,7 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
         width: 30%;
     }
 }
-@media screen and (max-width:1105px){
+@media screen and (max-width:1190px){
     .right {
         width: 65%;
     }
@@ -161,7 +161,7 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
         width: 35%;
     }
 }
-@media screen and (max-width:958px){
+@media screen and (max-width:1022px){
     .right {
         width: 60%;
     }
@@ -170,7 +170,7 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
         width: 40%;
     }
 }
-@media screen and (max-width:840px){
+@media screen and (max-width:905px){
     .right {
         width: 55%;
     }
@@ -179,18 +179,25 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
         width: 45%;
     }
 }
-@media screen and (max-width:760px){
+@media screen and (max-width:810px){
     .right {
         width: 100%;
     }
       
     .left {
-        display: none;
+        width: 100%;
+    }
+    .page {
+        margin-left: 50px;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
     }
 }
 
 
-@media screen and (max-width:1311px){
+@media screen and (max-width:1412px){
     .right_index {
         width: 70%;
     }
@@ -199,7 +206,7 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
         width: 30%;
     }
 }
-@media screen and (max-width:1105px){
+@media screen and (max-width:1190px){
     .right_index {
         width: 65%;
     }
@@ -208,7 +215,7 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
         width: 35%;
     }
 }
-@media screen and (max-width:958px){
+@media screen and (max-width:1022px){
     .right_index {
         width: 60%;
     }
@@ -217,7 +224,7 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
         width: 40%;
     }
 }
-@media screen and (max-width:840px){
+@media screen and (max-width:905px){
     .right_index {
         width: 55%;
     }
@@ -226,7 +233,7 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
         width: 45%;
     }
 }
-@media screen and (max-width:760px){
+@media screen and (max-width:810px){
     .right_index {
         display: none;
     }
