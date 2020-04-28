@@ -92,7 +92,7 @@ static xQueueHandle gpio_evt_queue = NULL;
 	static const char *TAG_3 = "Queue Creation";
 #endif
 
-static const char *motor_address = "motor_3";
+static const char *motor_address = "motor_2";
 static const char *firebase_address = "esp32-66ba5.firebaseio.com";
 
 //==========================
@@ -126,8 +126,17 @@ time_t now;
 struct tm timeinfo;
 
 char url[62];
-char bufferData[60][120]; //  { "T" : 28, "H" : "78", "S" : "ON", "D" : 12314554, "DO" : 123455431, "CO" : 123578 }
-					// T=Temperature, H = Humidity, S=Status, D=Date, DO=Daily Operation, CO=Continuous Operation
+char bufferData[60][120];	//  { "T" : 28, "H" : "78", "S" : "ON", "D" : 12314554, "DO" : 1588033061, "CO" : 358 }
+							// T=Temperature, H = Humidity, S=Status, D=Date, DO=Daily Operation, CO=Continuous Operation
+							// Example
+							/*{
+								"CO" : 414,
+								"D" : 1588033061,
+								"DO" : 414,
+								"H" : 91,
+								"S": 1,
+								"T" : 26
+							}*/
 uint8_t bufferCounter=0;
 int size;
 char strftime_db[26];
