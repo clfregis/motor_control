@@ -143,6 +143,53 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
     display: none;
 }
 
+#date-picker-container{
+    border: 1px solid red;
+    width: 80%;
+    padding: 8px 8px;
+    margin-left: auto;
+    margin-right: auto;
+    font-size: 13px;
+}
+
+[data-period] {
+    border: 1px solid red;
+    margin: 2px;
+    padding: 5px 5px;
+    background-color: #2196F3;
+    color: #FFF;
+    min-width: 50px;
+}
+
+[data-period]:hover {
+    cursor: pointer;
+    opacity: .7;
+}
+
+#date-picker-container div {
+    display: inline-flex;
+}
+
+#date-from,
+#date-to {
+  margin-right: 6px;
+  margin-left: 6px;
+  color: #2196F3;
+}
+
+.active {
+    background: #fd992b;
+}
+
+
+#day {
+    color: #2196F3;
+    margin-top: 20px;
+    margin-right: 20px;
+    font-size: 13px;
+    float: right;
+}
+
 @media screen and (max-width:1412px){
     .right {
         width: 70%;

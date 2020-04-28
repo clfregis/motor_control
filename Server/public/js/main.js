@@ -304,4 +304,88 @@ function drawGraph(local_xValues, local_yValues, local_yLabel, local_ID,
   //     });
   // });
 
+}/**
+ * As we are moving the guide, we want to update the items outside
+ * of the chart. We could do this inside the chart, but since JS
+ * is single threaded we don't want to block UI with a chart 
+ * update. A chart update is more expensive than a node update.
+ * You may see no performance gains on a dataset this size, but
+ * with some increase its possible to see a discrepancy for the
+ * user. This is why I chose to contstruct the items outside
+ * of the graph.
+ */
+zingchart.guide_mousemove = (e) => {
+  document.getElementById('day').innerHTML = 'Day: ' + e['scale-label']['scale-x'];
+}
+
+/** 
+ * ZingChart defined event listener. Will capture ZoomEvent and related 
+ * Zooming Information.
+ */
+zingchart.zoom = (e) => {
+  displayZoomValues(e.kmin, e.kmax);
+}
+ 
+ 
+/**
+ * Apply dates to display current zoomed dates
+ */
+let displayZoomValues = (sFrom, sTo) => {
+  let dateFrom = document.getElementById('date-from');
+  let dateTo = document.getElementById('date-to');
+ 
+  // If viewall is clicked show the default dates
+  if (!sFrom) {
+    sFrom = '1/31/19';
+  }
+  if (!sTo) {
+    sTo = '6/17/19';
+  }
+ 
+  dateFrom.innerHTML = sFrom;
+  dateTo.innerHTML = sTo;
+}
+ 
+/**
+ * Apply zoom to graph.
+ */
+let zoomToIndex = (max) => {
+ 
+  // ZingChart api automated zoom. Have to be careful
+  // not to zoom past the end of the graph
+  zingchart.exec('myChart', 'zoomto', {
+    xmax: max,
+    xmin: 0
+  });
+}
+ 
+/**
+ * Capture the spans clicks with data-period attribute.
+ */
+document.getElementById('date-picker-container').addEventListener('click', (e) => {
+  let target = e.target;
+ 
+  // Only capture spans with data-period attribute
+  if (target.dataset['period']) {
+    // Toggle classes
+    removeActiveClass();
+    e.target.classList.toggle('active');
+ 
+    switch (target.dataset['period']) {
+      case '1':
+        zoomToIndex(30);
+        break;
+      case '2':
+        zoomToIndex(60);
+        break;
+      default:
+        zingchart.exec('myChart', 'viewall');
+        break;
+    }
+  }
+});
+ 
+let removeActiveClass = () => {
+  let activeElement = document.querySelector('[data-period].active');
+  activeElement.classList.toggle('active');
 }

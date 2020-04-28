@@ -6,7 +6,6 @@
     <meta name="description" content="Dashboard of motors">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
-    <script src="https://cdn.zingchart.com/modules/zingchart-zoom-buttons.min.js"></script>
     <link rel="stylesheet" href="css/all.css">
     <link rel="stylesheet" href="plugins/fontawesome/css/all.min.css">
     <title>Motor Control Dashboard</title>
@@ -67,6 +66,22 @@
                             <p>Temperature</p>
                         </div>
                     </div>
+                    <div id="date-picker-container">
+                        <span data-period="D" class="active">Day</span>
+                        <span data-period="W">Week</span>
+                        <span data-period="M">Month</span>
+                        <span data-period="Y">Year</span>
+                        <span data-period="A">All</span>
+                        <div>
+                          <b>From:</b>
+                          <span id="date-from">1/31/19</span>
+                        </div>
+                        <div>
+                          <b>To:</b>
+                          <span id="date-to">6/17/19</span>
+                        </div>
+                        <div id="day"></div>
+                      </div>
                     <div id="Temperature" class="graph"></div>
                 </div>
     
