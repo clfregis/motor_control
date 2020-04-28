@@ -80,7 +80,7 @@
 #define GPIO_DATA_0             4   // DHT11 Sensor on the final code, try to use a DHT22 library
 #define GPIO_INPUT_PIN_SEL      (1ULL<<GPIO_INPUT_IO_0)
 #define ESP_INTR_FLAG_DEFAULT   0
-#define DEBUG 					0
+#define DEBUG 					1
 
 
 // Create a global variable of type xQueueHandle, which is the type we need to reference a FreeRTOS queue.
@@ -100,7 +100,7 @@ static const char *firebase_address = "esp32-66ba5.firebaseio.com";
 //==========================
 static void update_sntp_time(void);
 void time_sync_notification_cb(struct timeval *tv);
-static void obtain_time(time_t *local_now, struct tm *local_timeinfo);
+static void obtain_time(time_t *local_now, struct tm *local_timeinfo); // only need this function to check if it is midnight
 static void wifi_connection_start(void);
 static void wifi_connection_begin(void);
 static void wifi_connection_end(void);
@@ -126,7 +126,7 @@ time_t now;
 struct tm timeinfo;
 
 char url[62];
-char bufferData[60][120]; //  { "T" : 28, "H" : "78", "S" : "ON", "D" : "14 Apr 2020 08:02:21", "DO" : 123455431, "CO" : 123578 }
+char bufferData[60][120]; //  { "T" : 28, "H" : "78", "S" : "ON", "D" : 12314554, "DO" : 123455431, "CO" : 123578 }
 					// T=Temperature, H = Humidity, S=Status, D=Date, DO=Daily Operation, CO=Continuous Operation
 uint8_t bufferCounter=0;
 int size;
@@ -178,7 +178,8 @@ void clock_task(void *arg) {
         		ESP_LOGI(TAG, "Correct the drift, daily");
         	#endif
 	        update_sntp_time();
-	        obtain_time(&now, &timeinfo);
+	        time(&now);
+	        // obtain_time(&now, &timeinfo);
 	        running_time=0;
 	        continuous_running_time=0;
         }
@@ -215,12 +216,13 @@ void motor_supervisor_task(void *arg) {
     	if(temperature<=70 && humidity<=100 && (internalCounter==59 || currentState!=lastState)){
     		// Reset internalCounter
     		internalCounter=0;
-    		obtain_time(&now, &timeinfo);
-	        strftime(strftime_db, sizeof(strftime_db), "%c", &timeinfo);
+    		// obtain_time(&now, &timeinfo);
+	     	// strftime(strftime_db, sizeof(strftime_db), "%c", &timeinfo);
+    		time(&now); // Does not take into consideration the time zone
 
 	        size = sprintf (bufferData[bufferCounter],
-	        		"{ \"T\" : %d, \"H\" : %d, \"S\" : %d, \"D\" : \"%s\", \"DO\" : %ld, \"CO\" : %ld }",
-	        		temperature, humidity, motor_status, strftime_db, running_time, continuous_running_time);
+	        		"{ \"T\" : %d, \"H\" : %d, \"S\" : %d, \"D\" : %ld, \"DO\" : %ld, \"CO\" : %ld }",
+	        		temperature, humidity, motor_status, now, running_time, continuous_running_time);
 	        bufferCounter++;
 	        lastState=currentState;
 	    }
@@ -382,7 +384,8 @@ void app_main() {
     	    ESP_LOGI(TAG, "Time is not set yet. Connecting to WiFi and getting time over NTP.");
     	#endif
         update_sntp_time();
-        obtain_time(&now, &timeinfo);
+        time(&now);
+        // obtain_time(&now, &timeinfo);
     }
 
     //=============================
