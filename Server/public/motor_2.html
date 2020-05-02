@@ -7,9 +7,19 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
     <script src="https://cdn.zingchart.com/modules/zingchart-zoom-buttons.min.js"></script>
+    <script
+        src="https://code.jquery.com/jquery-3.5.0.min.js"
+        integrity="sha256-xNzN2a4ltkB44Mc/Jz3pT4iU1cmeR0FkXs4pru/JxaQ="
+        crossorigin="anonymous"></script>
+    <script 
+        src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" 
+        integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" 
+        crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="css/jquery-ui.css">
     <link rel="stylesheet" href="css/all.css">
     <link rel="stylesheet" href="plugins/fontawesome/css/all.min.css">
     <title>Motor Control Dashboard</title>
+    <link rel="shortcut icon" href="/images/favicon.ico">
 </head>
 <body>
     <div class="dashboard">
@@ -54,7 +64,6 @@
                     </div>
                     <p id="dailyOperation">Daily: </p>
                     <p id="continuousOperation">Continuous: </p>
-
                 </div>
             </div>
             <div class="right">
@@ -65,6 +74,17 @@
                         </div>
                         <div class="text_title">
                             <p>Temperature</p>
+                        </div>
+                    </div>
+                    <div class="card_title">
+                        <div class="icon_date_picker">
+                            <i class="fa fa-calendar" aria-hidden="true"></i>
+                        </div>
+                        <div class="text_date_picker">
+                            <p>Select Date:</p> 
+                        </div>
+                        <div class="input_date_picker">
+                            <input type="text" id="datepicker_temperature">
                         </div>
                     </div>
                     <div id="Temperature" class="graph"></div>
@@ -79,6 +99,17 @@
                             <p>Humidity</p>
                         </div>
                     </div>
+                    <div class="card_title">
+                        <div class="icon_date_picker">
+                            <i class="fa fa-calendar" aria-hidden="true"></i>
+                        </div>
+                        <div class="text_date_picker">
+                            <p>Select Date:</p> 
+                        </div>
+                        <div class="input_date_picker">
+                            <input type="text" id="datepicker_humidity">
+                        </div>
+                    </div>
                     <div id="Humidity" class="graph"></div>
                 </div>
     
@@ -91,8 +122,20 @@
                             <p>Status</p>
                         </div>
                     </div>
+                    <div class="card_title">
+                        <div class="icon_date_picker">
+                            <i class="fa fa-calendar" aria-hidden="true"></i>
+                        </div>
+                        <div class="text_date_picker">
+                            <p>Select Date:</p> 
+                        </div>
+                        <div class="input_date_picker">
+                            <input type="text" id="datepicker_status">
+                        </div>
+                    </div>
                     <div id="statusChart" class="graph"></div>
                 </div>
+
             </div>
         </div>
     </div>

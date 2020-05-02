@@ -98,11 +98,40 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
     justify-content: center;
 }
 
+.icon_date_picker{
+    font-size: 14px;
+    width: 5%;
+    padding: 2px 2px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
 .text_title {
     width: 80%;
     display: flex;
     flex-direction: row;
     justify-content: center;
+}
+
+.text_date_picker {
+    font-size: 14px;
+    padding: 2px 2px;
+    min-width: 85px;
+    display: flex;
+    flex-direction: row;
+}
+
+.input_date_picker{
+    font-size: 12px;
+    padding: 2px 2px;
+    width: 70%;
+    display: flex;
+    flex-direction: row;
+}
+
+#date_picker{
+    font-size: 10px;
 }
 
 .graph {
@@ -143,52 +172,20 @@ https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
     display: none;
 }
 
-#date-picker-container{
-    border: 1px solid red;
-    width: 80%;
-    padding: 8px 8px;
-    margin-left: auto;
-    margin-right: auto;
-    font-size: 13px;
-}
+#motor_label {
+    padding: 10px 10px;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
 
-[data-period] {
-    border: 1px solid red;
-    margin: 2px;
-    padding: 5px 5px;
-    background-color: #2196F3;
-    color: #FFF;
-    min-width: 50px;
 }
-
-[data-period]:hover {
+   
+#motor_label:hover {
     cursor: pointer;
     opacity: .7;
 }
 
-#date-picker-container div {
-    display: inline-flex;
-}
-
-#date-from,
-#date-to {
-  margin-right: 6px;
-  margin-left: 6px;
-  color: #2196F3;
-}
-
-.active {
-    background: #fd992b;
-}
-
-
-#day {
-    color: #2196F3;
-    margin-top: 20px;
-    margin-right: 20px;
-    font-size: 13px;
-    float: right;
-}
 
 @media screen and (max-width:1412px){
     .right {

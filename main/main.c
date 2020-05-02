@@ -92,7 +92,7 @@ static xQueueHandle gpio_evt_queue = NULL;
 	static const char *TAG_3 = "Queue Creation";
 #endif
 
-static const char *motor_address = "motor_1";
+static const char *motor_address = "motor_3";
 static const char *firebase_address = "esp32-66ba5.firebaseio.com";
 
 //==========================

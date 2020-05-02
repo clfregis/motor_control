@@ -1,12 +1,13 @@
 var temp = [], hum = [], time = [], state = [], daily = [], continuous = [];
 var status;
-var motor_label = document.getElementById("motorLabel").textContent;
 var current_motor = 'Motor 1';
-var yStatusLabels = {
+const yStatusLabels = {
 	0 : 'Stopped',
   1 : 'Operating',
   2 : 'Stopped',
-}
+};
+
+var motor_label = document.getElementById("motorLabel").textContent;
 
 var firebaseConfig = {
     apiKey: "AIzaSyA-fPrOStfPGq-Ze_wW3mloB-Qo2AhgU8c",
@@ -21,82 +22,81 @@ var firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 
-// Get a reference to the database service
-var database = firebase.database().ref(motor_label);
 
-//firebase.database.enableLogging(true);
+// window.onload event for Javascript to run after HTML
+// because this Javascript is injected into the document head
+window.addEventListener('load', () => {
+  // Get a reference to the database service
+  var database = firebase.database().ref(motor_label);
+  //firebase.database.enableLogging(true);
 
-database.on('value', function(snapshot) {
-  let snap = snapshot.val(); // vai ter todo o objeto
-  for (i in snap){ // vai iterar em cada key
-    for (n in snap[i]){
-      if (n=='T'){
-        temp.push(snap[i][n]);
-      }
-      if (n=='H'){
-        hum.push(snap[i][n]);
-      }
-      if (n=='D'){
-        time.push(snap[i][n]*1000);
-      }
-      if (n=='S'){
-        state.push(snap[i][n]);
-      }
-      if (n=='DO'){
-        daily.push(format_ISOhour(snap[i][n]));
-      }
-      if (n=='CO'){
-        continuous.push(format_ISOhour(snap[i][n]));
+  database.on('value', function(snapshot) {
+    let snap = snapshot.val(); // vai ter todo o objeto
+    for (i in snap){ // vai iterar em cada key
+      for (n in snap[i]){
+        if (n=='T'){
+          temp.push(snap[i][n]);
+        }
+        if (n=='H'){
+          hum.push(snap[i][n]);
+        }
+        if (n=='D'){
+          time.push(snap[i][n]*1000); //Multiply by thousand, because Zingchart works with ms, instead of sec
+        }
+        if (n=='S'){
+          state.push(snap[i][n]);
+        }
+        if (n=='DO'){
+          daily.push(format_ISOhour(snap[i][n]));
+        }
+        if (n=='CO'){
+          continuous.push(format_ISOhour(snap[i][n]));
+        }
       }
     }
-  }
-  let current_temp = temp[temp.length - 1];
-  //temp = temp.slice(-12, temp.length);
-  let current_hum = hum[hum.length - 1];
-  //hum = hum.slice(-12, hum.length);
-  let current_time = time[time.length - 1];
-  //time = time.slice(-12, time.lenght);
-  let current_state = state[state.length - 1];
-  //state = state.slice(-12, state.lenght);
-  let current_daily = daily[daily.length - 1];
-  //daily = daily.slice(-12, daily.length);
-  let current_continuous = continuous[continuous.length - 1];
-  //continuous = continuous.slice(-12), daily.length;
+    let current_temp = temp[temp.length - 1];
+    let current_hum = hum[hum.length - 1];
+    let current_time = time[time.length - 1];
+    let current_state = state[state.length - 1];
+    let current_daily = daily[daily.length - 1];
+    let current_continuous = continuous[continuous.length - 1];
 
-  if (current_state==1){
-    status='Operating';
-  }
-  else if (current_state==0){
-    status='Stopped';
-  }
-  else{
-    status='Halted';
-  }
+    if (current_state==1){
+      status='Operating';
+    }
+    else if (current_state==0){
+      status='Stopped';
+    }
+    else{
+      status='Halted';
+    }
 
-  if (motor_label=='motor_1'){
-    current_motor = 'Motor 1';
-  }
-  else if (motor_label=='motor_2'){
-    current_motor = 'Motor 2';
-  }
-  else if (motor_label=='motor_3'){
-    current_motor = 'Motor 3';
-  }
-  else if (motor_label=='motor_4'){
-    current_motor = 'Motor 4';
-  }
+    if (motor_label=='motor_1'){
+      current_motor = 'Motor 1';
+    }
+    else if (motor_label=='motor_2'){
+      current_motor = 'Motor 2';
+    }
+    else if (motor_label=='motor_3'){
+      current_motor = 'Motor 3';
+    }
+    else if (motor_label=='motor_4'){
+      current_motor = 'Motor 4';
+    }
 
-  document.getElementById("status").innerHTML = "Status: " + status;
-  document.getElementById("nameMotor").innerHTML = "Name: " + current_motor;
-  document.getElementById("currentTemperature").innerHTML = "Temperature: " + current_temp + "ºC";
-  document.getElementById("currentHumidity").innerHTML = "Humidity: " + current_hum + "%";
-  document.getElementById("dailyOperation").innerHTML = "Daily: " + current_daily;
-  document.getElementById("continuousOperation").innerHTML = "Continuous: " + current_continuous;
-  document.getElementById("lastUpdate").innerHTML = "Last Update: " + format_hour(current_time/1000) + ", " + format_date(current_time/1000);
+    document.getElementById("status").innerHTML = "Status: " + status;
+    document.getElementById("nameMotor").innerHTML = "Name: " + current_motor;
+    document.getElementById("currentTemperature").innerHTML = "Temperature: " + current_temp + "ºC";
+    document.getElementById("currentHumidity").innerHTML = "Humidity: " + current_hum + "%";
+    document.getElementById("dailyOperation").innerHTML = "Daily: " + current_daily;
+    document.getElementById("continuousOperation").innerHTML = "Continuous: " + current_continuous;
+    document.getElementById("lastUpdate").innerHTML = "Last Update: " + format_hour(current_time/1000) + ", " + format_date(current_time/1000);
 
-  drawGraph(time, temp, 'Temperature [ºC]', 'Temperature', 'Temperature: %v ºC', 'spline', '#C6BD74', 45);
-  drawGraph(time, hum, 'Humidity [%]', 'Humidity', 'Humidity: %v %', 'spline', '#84A6CC', 100);
-  drawGraph(time, state, 'Operation', 'statusChart', 'Status: %v', 'stepped', '#689167', 1);
+    drawGraph(time, temp, 'Temperature [ºC]', 'Temperature', 'Temperature: %v ºC', 'spline', '#C6BD74', 45);
+    drawGraph(time, hum, 'Humidity [%]', 'Humidity', 'Humidity: %v %', 'spline', '#84A6CC', 100);
+    drawGraph(time, state, 'Operation', 'statusChart', 'Status: %v', 'stepped', '#689167', 1);
+    // drawGraphMatrix(time, matrixTemp, 'Temperature [ºC]', 'noCu', 'Temperature: %v ºC', 'spline', '#C6BD74', 45);
+  });
 });
 
 function format_hour(seconds){
@@ -220,7 +220,7 @@ function drawGraph(local_xValues, local_yValues, local_yLabel, local_ID,
         fontSize: 14,
       },
       zooming: true,
-      zoomTo: [local_xValues.length-15,local_xValues.length],
+      zoomTo: [local_xValues.length-30,local_xValues.length],
     },
     tooltip: {
       backgroundColor: '#484F5D',
@@ -254,14 +254,14 @@ function drawGraph(local_xValues, local_yValues, local_yLabel, local_ID,
     },
     series: [
           { 
-            'values': local_yValues,
-            'line-color' : local_graphColor,
-            'line-width' : 4,
+            values: local_yValues,
+            lineColor : local_graphColor,
+            lineWidth : 4,
             marker: { /* Marker object */
-              'background-color': local_graphColor, /* hexadecimal or RGB value */
+              backgroundColor: local_graphColor, /* hexadecimal or RGB value */
               size : 4, /* in pixels */
-              'border-color' : local_graphColor, /* hexadecimal or RBG value */
-              'border-width' : 2 /* in pixels */
+              borderColor : local_graphColor, /* hexadecimal or RBG value */
+              borderWidth : 2 /* in pixels */
             }
           }
         ]
@@ -271,121 +271,108 @@ function drawGraph(local_xValues, local_yValues, local_yLabel, local_ID,
     data: chartConfig
   });
 
-  // Zoom Button Magic
-  // zingchart.loadModules('zoom-buttons', () => {
-  //   // fetch the data remotely
-  //   fetch('https://cdn.zingchart.com/datasets/timeseries-sample-data-2019.json')
-  //     .then(res => res.json())
-  //     .then(timeseriesData => {
-  //       // assign data
-  //       //chartConfig.series[0].values = timeseriesData.values;
-  //       // destroy the chart since we have to render the
-  //       // chart with a module. if there is no module,
-  //       // just use set data like the catch statement
-  //       zingchart.exec(local_ID, 'destroy');
-  //       // render chart with width and height to
-  //       // fill the parent container CSS dimensions
-  //       zingchart.render({
-  //         id: local_ID,
-  //         data: chartConfig,
-  //         modules: 'zoom-buttons'
-  //       });
-  //     })
-  //     .catch(e => {
-  //       // if error, render blank chart
-  //       console.error('--- error fetching data from: https://cdn.zingchart.com/datasets/timeseries-sample-data.json ---');
-  //       chartConfig.title = {};
-  //       chartConfig.title.text = 'Error Fetching https://cdn.zingchart.com/datasets/timeseries-sample-data.json';
-  //       // just exec setdata api method since we don't need to render the zoom modules
-  //       // https://www.zingchart.com/docs/api/methods/
-  //       zingchart.exec(local_ID, 'setdata', {
-  //         data: chartConfig
-  //       });
-  //     });
-  // });
-
-}/**
- * As we are moving the guide, we want to update the items outside
- * of the chart. We could do this inside the chart, but since JS
- * is single threaded we don't want to block UI with a chart 
- * update. A chart update is more expensive than a node update.
- * You may see no performance gains on a dataset this size, but
- * with some increase its possible to see a discrepancy for the
- * user. This is why I chose to contstruct the items outside
- * of the graph.
- */
-zingchart.guide_mousemove = (e) => {
-  document.getElementById('day').innerHTML = 'Day: ' + e['scale-label']['scale-x'];
 }
 
-/** 
- * ZingChart defined event listener. Will capture ZoomEvent and related 
- * Zooming Information.
- */
-zingchart.zoom = (e) => {
-  displayZoomValues(e.kmin, e.kmax);
-}
+
+
+
+// /**
+//  * As we are moving the guide, we want to update the items outside
+//  * of the chart. We could do this inside the chart, but since JS
+//  * is single threaded we don't want to block UI with a chart 
+//  * update. A chart update is more expensive than a node update.
+//  * You may see no performance gains on a dataset this size, but
+//  * with some increase its possible to see a discrepancy for the
+//  * user. This is why I chose to contstruct the items outside
+//  * of the graph.
+//  */
+// // zingchart.guide_mousemove = (e) => {
+// //   document.getElementById('day').innerHTML = 'Day: ' + e['scale-label']['scale-x'].substr(0,16);
+// // }
+
+// /** 
+//  * ZingChart defined event listener. Will capture ZoomEvent and related 
+//  * Zooming Information.
+//  */
+// zingchart.zoom = (e) => {
+//   console.log(e);
+//   displayZoomValues(format_date(e.kmin/1000), format_date(e.kmax/1000));
+// }
  
  
 /**
  * Apply dates to display current zoomed dates
  */
-let displayZoomValues = (sFrom, sTo) => {
-  let dateFrom = document.getElementById('date-from');
-  let dateTo = document.getElementById('date-to');
+// let displayZoomValues = (sFrom, sTo) => {
+//   let dateFrom = document.getElementById('date-from');
+//   let dateTo = document.getElementById('date-to');
  
-  // If viewall is clicked show the default dates
-  if (!sFrom) {
-    sFrom = '1/31/19';
-  }
-  if (!sTo) {
-    sTo = '6/17/19';
-  }
+//   // If viewall is clicked show the default dates
+//   if (!sFrom) {
+//     sFrom = '27/04/2020';
+//   }
+//   if (!sTo) {
+//     sTo = '28/04/2020';
+//   }
  
-  dateFrom.innerHTML = sFrom;
-  dateTo.innerHTML = sTo;
-}
+//   dateFrom.innerHTML = sFrom;
+//   dateTo.innerHTML = sTo;
+// }
  
+// document.getElementById("datepicker").addEventListener("input", () => {
+//   console.log('Vai tomar no cu, anda logo!');
+// });
+
 /**
  * Apply zoom to graph.
  */
-let zoomToIndex = (max) => {
+let zoomToIndex = (minValue, maxValue, local_ID) => {
  
   // ZingChart api automated zoom. Have to be careful
   // not to zoom past the end of the graph
-  zingchart.exec('myChart', 'zoomto', {
-    xmax: max,
-    xmin: 0
+  zingchart.exec(local_ID, 'zoomto', {
+    xmax: maxValue,
+    xmin: minValue,
   });
 }
- 
-/**
- * Capture the spans clicks with data-period attribute.
- */
-document.getElementById('date-picker-container').addEventListener('click', (e) => {
-  let target = e.target;
- 
-  // Only capture spans with data-period attribute
-  if (target.dataset['period']) {
-    // Toggle classes
-    removeActiveClass();
-    e.target.classList.toggle('active');
- 
-    switch (target.dataset['period']) {
-      case '1':
-        zoomToIndex(30);
-        break;
-      case '2':
-        zoomToIndex(60);
-        break;
-      default:
-        zingchart.exec('myChart', 'viewall');
-        break;
-    }
-  }
-});
- 
-let removeActiveClass = () => {
-  let activeElement = document.querySelector('[data-period].active');
-  activeElement.classList.toggle('active');
-}
+
+$('#datepicker_temperature').datepicker({ 
+    dateFormat: 'dd/mm/yy',
+    showOtherMonths: true,
+    showOtherMonths: true }).on("change", function() {
+      // Get date from input form
+      var datePicker = document.getElementById("datepicker_temperature").value;
+      console.log(datePicker);
+    
+      // Structure date
+      var structuredDatePicker = [datePicker.substr(0,2),datePicker.substr(3,2),datePicker.substr(6,4)];
+      console.log(structuredDatePicker);
+    
+      // Create a date variable
+      var d = new Date(structuredDatePicker[2],structuredDatePicker[1]-1,structuredDatePicker[0]);
+      console.log(d);
+    
+      // Transform its value to UNIX timestamp, if Brazil, GMT-3, subtracts 3*3600*1000
+      // Turns out that it is not necessary to subtract the value since when returning to front end
+      // in zoom function, it does the timezone again
+      var transformedDate = Date.parse(d)/*-10800000*/;
+      console.log(transformedDate);
+    
+      var minmin = function() {
+        for (var i=0; i<time.length;i++){
+          if (time[i]>=transformedDate){
+            return i;
+          }
+        }
+      }();
+
+      var maxmax = function() {
+        for (var i=0; i<time.length;i++){
+          if (time[i]>=(transformedDate+(24*3600*1000))){
+            return i;
+          }
+        }
+      }();
+
+      zoomToIndex(minmin, maxmax, 'Temperature');
+    });
