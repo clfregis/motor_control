@@ -20,7 +20,7 @@ menu "Motor Configuration"
 
 	choice
 		prompt "Time Zone"
-		default Brazil
+		default Mexico
 		help
 			Choose the Time Zone.
 		config Mexico
@@ -28,5 +28,10 @@ menu "Motor Configuration"
 		config Brazil
 			bool "Brazil"
 	endchoice
+
+	config debug
+		bool "Log prints for Debug"
+		help
+			Show the log of operation for debug.
 
 endmenu

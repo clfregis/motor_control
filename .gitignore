@@ -4,4 +4,6 @@ tests/
 sdkconfig
 sdkconfig.old
 anotacoes.md
+sdkconfig
+sdkconfig.old
 Server/old/

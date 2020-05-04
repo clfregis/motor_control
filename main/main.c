@@ -56,13 +56,14 @@
 #include "lwip/sys.h"
 #include "lwip/netdb.h"
 #include "lwip/dns.h"
+#include "cjson.h"
 
 /**
  * Brief:
  *
  * GPIO status:
  * GPIO4:   data
- * GPIO12:  input DEPRECATED. It is not possible to use pin 12 since it is connected to flash chip
+ * GPIO12:  input DEPRECATED. It is not possible to use pin 12 during bootup since it is connected to flash chip
  * GPIO27:  input
  * GPIO14:  input, pulled up, interrupt from rising edge and falling edge
  * GPIO18:  output
@@ -86,26 +87,28 @@
 #define GPIO_INPUT_PIN_SEL      ((1ULL<<GPIO_INPUT_IO_0) | (1ULL<<GPIO_INPUT_IO_1))
 #define GPIO_DATA_0             4   // DHT11 Sensor on the final code, try to use a DHT22 library
 #define ESP_INTR_FLAG_DEFAULT   0
-#define DEBUG 					1
 
 
 // Create a global variable of type xQueueHandle, which is the type we need to reference a FreeRTOS queue.
 static xQueueHandle gpio_evt_queue = NULL;
-#if DEBUG
+#if CONFIG_debug
 	static const char *TAG = "LwIP SNTP";
 	static const char *TAG_1 = "HTTP Request";
 	static const char *TAG_2 = "Hour/Date";
 	static const char *TAG_3 = "Queue Creation";
+	static const char *TAG_4 = "Update values";
 #endif
 
-static const char *motor_address = CONFIG_motorValue;
-static const char *firebase_address = CONFIG_firebaseAddress;
-static const uint8_t spTimesec = CONFIG_SPTimesec;
+static const char *motorAddress = CONFIG_motorValue;
+static const char *firebaseAddress = CONFIG_firebaseAddress;
+uint32_t spTimesec = CONFIG_SPTimesec;
 
 //==========================
 // Function definitions
 //==========================
 static void update_sntp_time(void);
+static void update_last_value(void);
+static void get_sp_time(char *motorSPAddress);
 void time_sync_notification_cb(struct timeval *tv);
 static void obtain_time(time_t *local_now, struct tm *local_timeinfo); // only need this function to check if it is midnight
 static void wifi_connection_start(void);
@@ -125,12 +128,12 @@ static void IRAM_ATTR gpio_isr_handler(void* arg);
 uint8_t temperature = 0;
 uint8_t humidity = 0;
 // Global variables to handle the status of the motor
-uint8_t motor_status = 1; // It starts on
-time_t running_time = 0;
-time_t continuous_running_time = 0;
+uint8_t motorStatus = 1; // It starts on
+time_t runningTime = 0;
+time_t continuousRunningTime = 0;
 
 time_t now;
-struct tm timeinfo;
+struct tm timeInfo;
 
 char url[62];
 char bufferData[60][120];	//  { "T" : 28, "H" : "78", "S" : "ON", "D" : 12314554, "DO" : 1588033061, "CO" : 358 }
@@ -159,33 +162,33 @@ char strftime_db[26];
 
 // Task that controls the motor operation, turning it on, off
 void motor_control_task(void* arg) {
-    uint32_t io_num;
+    uint8_t io_num;
     while(1) {
         // When receives an event on the gpio queue
         if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
-            if(io_num==GPIO_INPUT_IO_0 && gpio_get_level(io_num)==1) {
-            	//printf("Borda de subida\n");
+            if(io_num==GPIO_INPUT_IO_0 && gpio_get_level(io_num)==1 && motorStatus!=2) {
+            	// NC not pressed
                 // Turn on the motor
                 gpio_set_level(GPIO_OUTPUT_IO_0, 1);
-                motor_status = 1;
+                // Update status
+                motorStatus = 1;
             }
-            if (io_num==GPIO_INPUT_IO_0 && gpio_get_level(io_num)==0) {
-                //printf("Borda de descida\n");
+            if (io_num==GPIO_INPUT_IO_0 && gpio_get_level(io_num)==0 && motorStatus!=2) {
+            	// NC pressed
                 // Turn off the motor
                 gpio_set_level(GPIO_OUTPUT_IO_0, 0);
-                motor_status = 0;
+                // Update status
+                motorStatus = 0;
             }
-            if(io_num==GPIO_INPUT_IO_1 && gpio_get_level(io_num)==0) {
-                //Borda de descida
-                printf("%d Birl \n", io_num);
+            if(io_num==GPIO_INPUT_IO_1 && gpio_get_level(io_num)==0 && motorStatus==2) {
                 // Reset Motor
                 gpio_set_level(GPIO_OUTPUT_IO_0, 1);
                 // Reset its state
-                motor_status = 1;
+                motorStatus = 1;
                 // Turn off Alert LED
                 gpio_set_level(GPIO_OUTPUT_IO_1, 0);
                 // Reset continuous time operation
-                continuous_running_time=0;
+                continuousRunningTime=0;
             }
         }
     }
@@ -198,18 +201,18 @@ void clock_task(void *arg) {
         // Every other second, check if is midnight
         vTaskDelay(1000/portTICK_RATE_MS);
 
-        obtain_time(&now, &timeinfo);
+        obtain_time(&now, &timeInfo);
 
         // Correct the drift every night at midnight
-        if (timeinfo.tm_hour==0 && timeinfo.tm_min==0 && timeinfo.tm_sec==0){
-        	#if DEBUG
+        if (timeInfo.tm_hour==0 && timeInfo.tm_min==0 && timeInfo.tm_sec==0){
+        	#if CONFIG_debug
         		ESP_LOGI(TAG, "Correct the drift, daily");
         	#endif
 	        update_sntp_time();
 	        time(&now);
-	        // obtain_time(&now, &timeinfo);
-	        running_time=0;
-	        continuous_running_time=0;
+	        // Update running time to the server
+	        runningTime=0;
+	        continuousRunningTime=0;
         }
 	}
 }
@@ -223,24 +226,26 @@ void motor_supervisor_task(void *arg) {
 
 	while(1){
 
-		if (motor_status==1){
+		if (motorStatus==1){
 			// Update times
-			running_time += 1;
-			continuous_running_time += 1;
-			currentState=motor_status;
-            if (continuous_running_time>=spTimesec){
+			runningTime += 1;
+			continuousRunningTime += 1;
+			currentState=motorStatus;
+            if (continuousRunningTime>=spTimesec){
                 // Turn on the Alert LED
                 gpio_set_level(GPIO_OUTPUT_IO_1, 1);
                 // Turn off the motor
                 gpio_set_level(GPIO_OUTPUT_IO_0, 0);
                 // Set status to halted
-                motor_status=2;
+                motorStatus=2;
+                // Reset time counting
+                continuousRunningTime = 0;
             }
 		}
-		else if (motor_status==0){
+		else if (motorStatus==0){
 			// Clear times
-			continuous_running_time = 0;
-			currentState=motor_status;
+			continuousRunningTime = 0;
+			currentState=motorStatus;
 		}
     	// Update temperature
    		temperature = DHT11_read().temperature;
@@ -251,13 +256,13 @@ void motor_supervisor_task(void *arg) {
     	if(temperature<=70 && humidity<=100 && (internalCounter==59 || currentState!=lastState)){
     		// Reset internalCounter
     		internalCounter=0;
-    		// obtain_time(&now, &timeinfo);
-	     	// strftime(strftime_db, sizeof(strftime_db), "%c", &timeinfo);
+    		// obtain_time(&now, &timeInfo);
+	     	// strftime(strftime_db, sizeof(strftime_db), "%c", &timeInfo);
     		time(&now); // Does not take into consideration the time zone
 
 	        size = sprintf (bufferData[bufferCounter],
 	        		"{ \"T\" : %d, \"H\" : %d, \"S\" : %d, \"D\" : %ld, \"DO\" : %ld, \"CO\" : %ld }",
-	        		temperature, humidity, motor_status, now, running_time, continuous_running_time);
+	        		temperature, humidity, motorStatus, now, runningTime, continuousRunningTime);
 	        bufferCounter++;
 	        lastState=currentState;
 	    }
@@ -287,7 +292,7 @@ void database_task(void *pvParameters){
 	        // ======================================
 
 	        // Create url
-			sprintf(url, "https://%s/%s.json",firebase_address, motor_address);
+			sprintf(url, "https://%s/%s.json",firebaseAddress, motorAddress);
 
 	        // Struct which contains the HTTP configuration
 	        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv424esp_http_client_config_t
@@ -305,7 +310,7 @@ void database_task(void *pvParameters){
 	        // client_open will open the connection, write all header strings and return ESP_OK if all went well
 	        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
 	        if (esp_http_client_open(client, size) == ESP_OK) {
-	        	#if DEBUG
+	        	#if CONFIG_debug
 	        		ESP_LOGI(TAG_1, "Connection opened");
 	        	#endif
 	            esp_http_client_write(client, bufferData[i], size);
@@ -313,28 +318,28 @@ void database_task(void *pvParameters){
 	            esp_http_client_fetch_headers(client);
 	            //ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
 	            if (esp_http_client_get_status_code(client)==200){
-	            	#if DEBUG
+	            	#if CONFIG_debug
 	                	ESP_LOGI(TAG_1, "Message successfuly sent!");
 	                #endif
 	            }
 	            else {
-	            	#if DEBUG
+	            	#if CONFIG_debug
 	            	   	ESP_LOGI(TAG_1, "Sending message failed!");
 	            	#endif
 	            }
 	            //============
-	            // Debug, but, in the future, perform a verification that the message was sent
+	            // CONFIG_debug, but, in the future, perform a verification that the message was sent
 	            // char valor[77];
 	            // // Read the stream of data
 	            // esp_http_client_read(client, valor, 77);
 	            // printf("%s\n",valor);
-	            // Debug
+	            // CONFIG_debug
 	            //============
 
 	            esp_http_client_close(client);
 	        }
 	        else {
-	        	#if DEBUG
+	        	#if CONFIG_debug
 	        	    ESP_LOGE(TAG_1, "Connection failed");
 	        	#endif
 	        }
@@ -349,6 +354,8 @@ void database_task(void *pvParameters){
     	// Reset bufferCounter
     	bufferCounter=0;
     	// Clean buffer? I don't think so, we overwrite old data
+
+    	get_sp_time(motorAddress);
         wifi_connection_end();
 
         // Wait for another update: 1 minute
@@ -420,21 +427,24 @@ void app_main() {
     // Apply
     tzset();
 
-    obtain_time(&now, &timeinfo);
+    obtain_time(&now, &timeInfo);
 
     // Is time set? If not, tm_year will be (1970 - 1900).
-    if (timeinfo.tm_year < (2020 - 1900)) {
-    	#if DEBUG
+    if (timeInfo.tm_year < (2020 - 1900)) {
+    	#if CONFIG_debug
     	    ESP_LOGI(TAG, "Time is not set yet. Connecting to WiFi and getting time over NTP.");
     	#endif
         update_sntp_time();
         time(&now);
-        // obtain_time(&now, &timeinfo);
+        // obtain_time(&now, &timeInfo);
     }
 
     //=============================
     // End of RTC configuration
     //=============================
+
+    update_last_value();
+
 
 
     /*  So, we will create a queue that can hold a maximum of 10 elements and since it will 
@@ -445,7 +455,7 @@ void app_main() {
     gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
 
     if(gpio_evt_queue == NULL) {
-    	#if DEBUG
+    	#if CONFIG_debug
     		ESP_LOGE(TAG_3, "Error creating the queue");
     	#endif
     }
@@ -478,10 +488,110 @@ void app_main() {
 //==========================
 // Functions
 //==========================
+
+static void update_last_value(void){
+	wifi_connection_start();
+
+	#if CONFIG_debug
+		ESP_LOGI(TAG_4, "Initializing Update");
+	#endif
+
+    // ======================================
+    // Start GET request
+    // ======================================
+
+    // Get last value from firebase
+    // obatin time (now, timeInfo)
+    // Check if last value was in current day
+    // If so update runningTime variable
+    // Else, set it to zero
+
+    // ======================================
+    // End of GET request
+    // ======================================
+
+	// Connect to firebase, gg
+	wifi_connection_end();
+
+}
+static void get_sp_time(char *motorSPAddress){
+
+	#if CONFIG_debug
+		ESP_LOGI(TAG_4, "Initializing Update");
+	#endif
+
+	// ======================================
+    // Start GET request
+    // ======================================
+
+    // Create url
+	sprintf(url, "https://%s/sp_time.json",firebaseAddress);
+
+    // Struct which contains the HTTP configuration
+    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv424esp_http_client_config_t
+    esp_http_client_config_t config = {
+    .url = url,
+    .event_handler = _http_event_handler,
+    };
+
+    // Call the client init passing the config struct to start a HTTP session
+    // It returns a esp_http_client_handle_t that you must use as input to other functions in the interface
+    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_initPK24esp_http_client_config_t
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+
+    // client_open will open the connection, write all header strings and return ESP_OK if all went well
+    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
+    if (esp_http_client_open(client, 0) == ESP_OK) {
+    	#if CONFIG_debug
+    		ESP_LOGI(TAG_1, "Connection opened");
+    	#endif
+        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
+        esp_http_client_fetch_headers(client);
+        //ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
+        if (esp_http_client_get_status_code(client)==200){
+        	#if CONFIG_debug
+            	ESP_LOGI(TAG_1, "Message successfuly sent!");
+            #endif
+        }
+        else {
+        	#if CONFIG_debug
+        	   	ESP_LOGI(TAG_1, "Sending message failed!");
+        	#endif
+        }
+
+        char valor[esp_http_client_get_content_length(client)];
+        // Read the stream of data
+        esp_http_client_read(client, valor, esp_http_client_get_content_length(client));
+
+        cJSON *root = cJSON_Parse(valor);
+        spTimesec = cJSON_GetObjectItem(root,motorSPAddress)->valueint;
+        //============
+        // CONFIG_debug, but, in the future, perform a verification that the message was sent
+        // char valor[77];
+        // // Read the stream of data
+        // esp_http_client_read(client, valor, 77);
+        // printf("%s\n",valor);
+        // CONFIG_debug
+        //============
+
+        esp_http_client_close(client);
+    }
+    else {
+    	#if CONFIG_debug
+    	    ESP_LOGE(TAG_1, "Connection failed");
+    	#endif
+    }
+    // ======================================
+    // End of GET request
+    // ======================================
+
+}
+
+
 static void update_sntp_time(void) {
 	wifi_connection_start();
 
-	#if DEBUG
+	#if CONFIG_debug
 		ESP_LOGI(TAG, "Initializing SNTP");
 	#endif
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
@@ -500,7 +610,7 @@ static void update_sntp_time(void) {
     // There is a function called adjtime(), which updates the system time
     // Then, when we call time(), it gets the updated system time.
     while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count) {
-    	#if DEBUG
+    	#if CONFIG_debug
     	    ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
     	#endif
         vTaskDelay(2000 / portTICK_PERIOD_MS);
@@ -510,24 +620,24 @@ static void update_sntp_time(void) {
 }
 
 void time_sync_notification_cb(struct timeval *tv) {
-	#if DEBUG
+	#if CONFIG_debug
 		ESP_LOGI(TAG, "Notification of a time synchronization event");
 	#endif
 }
 
 static void obtain_time(time_t *local_now, struct tm *local_timeinfo){
-    #if DEBUG
-    	// For debug, to show in terminal the update time
+    #if CONFIG_debug
+    	// For CONFIG_debug, to show in terminal the update time
 		char strftime_buf[64];
 	#endif
 
     // Store in `now` the UNIX timestamp
     time(local_now);
-    // Store in `timeinfo` a human readable format including the Time Zone configured in main
+    // Store in `timeInfo` a human readable format including the Time Zone configured in main
     localtime_r(local_now, local_timeinfo);
 
-    #if DEBUG
-	    // Print local time (Debug Only)
+    #if CONFIG_debug
+	    // Print local time (CONFIG_debug Only)
 	    strftime(strftime_buf, sizeof(strftime_buf), "%c", local_timeinfo);
 	    ESP_LOGI(TAG_2, "The current date/time is: %s", strftime_buf);
 	#endif
@@ -561,27 +671,27 @@ static void IRAM_ATTR gpio_isr_handler(void* arg) {
 esp_err_t _http_event_handler(esp_http_client_event_t *evt) {
     switch(evt->event_id) {
         case HTTP_EVENT_ERROR:
-        	#if DEBUG
+        	#if CONFIG_debug
                 ESP_LOGD(TAG_1, "HTTP_EVENT_ERROR");
             #endif
             break;
         case HTTP_EVENT_ON_CONNECTED:
-        	#if DEBUG
+        	#if CONFIG_debug
                 ESP_LOGD(TAG_1, "HTTP_EVENT_ON_CONNECTED");
             #endif
             break;
         case HTTP_EVENT_HEADER_SENT:
-        	#if DEBUG
+        	#if CONFIG_debug
             	ESP_LOGD(TAG_1, "HTTP_EVENT_HEADER_SENT");
             #endif
             break;
         case HTTP_EVENT_ON_HEADER:
-        	#if DEBUG
+        	#if CONFIG_debug
             	ESP_LOGD(TAG_1, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
             #endif
             break;
         case HTTP_EVENT_ON_DATA:
-        	#if DEBUG
+        	#if CONFIG_debug
         	    ESP_LOGD(TAG_1, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
         	#endif
             if (!esp_http_client_is_chunked_response(evt->client)) {
@@ -590,12 +700,12 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt) {
             }
             break;
         case HTTP_EVENT_ON_FINISH:
-        	#if DEBUG
+        	#if CONFIG_debug
                 ESP_LOGD(TAG_1, "HTTP_EVENT_ON_FINISH");
             #endif
             break;
         case HTTP_EVENT_DISCONNECTED:
-        	#if DEBUG
+        	#if CONFIG_debug
             	ESP_LOGI(TAG_1, "HTTP_EVENT_DISCONNECTED");
             int mbedtls_err = 0;
             esp_err_t err = esp_tls_get_and_clear_last_error(evt->data, &mbedtls_err, NULL);
