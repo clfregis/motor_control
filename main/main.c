@@ -8,20 +8,21 @@
  * It consists of two outputs (a LED and a relay), one input switch and a sensor reading
  * using serial communication.
  * 
- * The temperature_humidity_task stays gathering the information of the DHT22 sensor
- * every other 2 seconds
+ * The motor_supervisor_task stays gathering the information of the DHT22 sensor and motor
+ * data like continuous operating time, operation time and status. It stores the values in 
+ * a buffer every minute or if the motor change its state.
  * 
  * An ISR handler takes care of sending events to the queue whenever an interrupt occurs.
+ * Hardware interrupts are attached to the two input pins (NC contact switch and a button)
  * 
  * Interrupts will occur if the NC switch is pressed or released, calling events
  * responsible for starting/stopping the motor and recording the running time of the motor.
+ * Also a hardware interrupt will be triggered whenever the button to reset the motor is pressed
  *
- * When the running time of the motor is greater than a sp time, it turns on the LED.
- *
- * Every second all these information (time of operation, temperature, humidity,
- * motor status and overflow of functioning) will be passed to a database online.
+ * When the running time of the motor is greater than a sp time, it turns on the LED and stops the motor
+ * It changes the variable state to value 2, which means halted. (0 is stopped and 1 is running)
  * 
- * Hopefully, but not mandatory, we will be able to turn on and off the motor online.
+ * Hopefully, but not mandatory, we will be able to reset the motor online.
  *
 **/
 
@@ -60,25 +61,30 @@
  * Brief:
  *
  * GPIO status:
+ * GPIO4:   data
+ * GPIO12:  input DEPRECATED. It is not possible to use pin 12 since it is connected to flash chip
+ * GPIO27:  input
+ * GPIO14:  input, pulled up, interrupt from rising edge and falling edge
  * GPIO18:  output
  * GPIO19:  output
- * GPIO14:  input, pulled up, interrupt from rising edge and falling edge
- * GPIO4:   input
  *
  * Connection:
- * Connect GPIO14 with NC switch
  * Connect GPIO4 with DHT sensor
+ * Connect GPIO27 Reset Button
+ * Connect GPIO14 with NC switch
  * Connect GPIO18 with relay (Motor)
- * Connect GPIO19 with LED
+ * Connect GPIO19 with LED Overflow
  *
  **/
+
 
 #define GPIO_OUTPUT_IO_0        18  // Motor pin (will control a relay)
 #define GPIO_OUTPUT_IO_1        19  // LED pin 
 #define GPIO_OUTPUT_PIN_SEL     ((1ULL<<GPIO_OUTPUT_IO_0) | (1ULL<<GPIO_OUTPUT_IO_1))
 #define GPIO_INPUT_IO_0         14  // NC Switch pin
+#define GPIO_INPUT_IO_1         27  // Reset Button
+#define GPIO_INPUT_PIN_SEL      ((1ULL<<GPIO_INPUT_IO_0) | (1ULL<<GPIO_INPUT_IO_1))
 #define GPIO_DATA_0             4   // DHT11 Sensor on the final code, try to use a DHT22 library
-#define GPIO_INPUT_PIN_SEL      (1ULL<<GPIO_INPUT_IO_0)
 #define ESP_INTR_FLAG_DEFAULT   0
 #define DEBUG 					1
 
@@ -92,8 +98,9 @@ static xQueueHandle gpio_evt_queue = NULL;
 	static const char *TAG_3 = "Queue Creation";
 #endif
 
-static const char *motor_address = "motor_3";
-static const char *firebase_address = "esp32-66ba5.firebaseio.com";
+static const char *motor_address = CONFIG_motorValue;
+static const char *firebase_address = CONFIG_firebaseAddress;
+static const uint8_t spTimesec = CONFIG_SPTimesec;
 
 //==========================
 // Function definitions
@@ -156,17 +163,29 @@ void motor_control_task(void* arg) {
     while(1) {
         // When receives an event on the gpio queue
         if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
-            if(gpio_get_level(io_num)==1) {
+            if(io_num==GPIO_INPUT_IO_0 && gpio_get_level(io_num)==1) {
             	//printf("Borda de subida\n");
                 // Turn on the motor
                 gpio_set_level(GPIO_OUTPUT_IO_0, 1);
                 motor_status = 1;
             }
-            else {
+            if (io_num==GPIO_INPUT_IO_0 && gpio_get_level(io_num)==0) {
                 //printf("Borda de descida\n");
                 // Turn off the motor
                 gpio_set_level(GPIO_OUTPUT_IO_0, 0);
                 motor_status = 0;
+            }
+            if(io_num==GPIO_INPUT_IO_1 && gpio_get_level(io_num)==0) {
+                //Borda de descida
+                printf("%d Birl \n", io_num);
+                // Reset Motor
+                gpio_set_level(GPIO_OUTPUT_IO_0, 1);
+                // Reset its state
+                motor_status = 1;
+                // Turn off Alert LED
+                gpio_set_level(GPIO_OUTPUT_IO_1, 0);
+                // Reset continuous time operation
+                continuous_running_time=0;
             }
         }
     }
@@ -196,7 +215,6 @@ void clock_task(void *arg) {
 }
 
 // Task that supervise the motor, time operation and status
-// To implement: Create a local buffer that gather information each second and clears it upon uploading to weberver
 void motor_supervisor_task(void *arg) {
     DHT11_init(GPIO_DATA_0);
     uint8_t internalCounter=0;
@@ -210,8 +228,16 @@ void motor_supervisor_task(void *arg) {
 			running_time += 1;
 			continuous_running_time += 1;
 			currentState=motor_status;
+            if (continuous_running_time>=spTimesec){
+                // Turn on the Alert LED
+                gpio_set_level(GPIO_OUTPUT_IO_1, 1);
+                // Turn off the motor
+                gpio_set_level(GPIO_OUTPUT_IO_0, 0);
+                // Set status to halted
+                motor_status=2;
+            }
 		}
-		else {
+		else if (motor_status==0){
 			// Clear times
 			continuous_running_time = 0;
 			currentState=motor_status;
@@ -366,8 +392,10 @@ void app_main() {
     io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
     // Set as input mode    
     io_conf.mode = GPIO_MODE_INPUT;
-    // Enable pull-up mode
-    io_conf.pull_up_en = 1;
+    // Disable pull-down mode, using external pullup
+    io_conf.pull_down_en = 0;
+    // Disable pull-up mode, using external pullup
+    io_conf.pull_up_en = 0;
     gpio_config(&io_conf);
 
     //=============================
@@ -380,8 +408,15 @@ void app_main() {
     // RTC configuration
     //=============================
 
+    // https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+    #ifdef Brazil 
+        char *timeZone = "<-03>3";
+    #else
+        char *timeZone = "CST6CDT,M4.1.0,M10.5.0";
+    #endif
+
     // Set timezone to Region
-    setenv("TZ", "<-03>3", 1);
+    setenv("TZ", timeZone, 1);
     // Apply
     tzset();
 
@@ -419,6 +454,7 @@ void app_main() {
     gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
     // Hook isr handler for specific gpio pin
     gpio_isr_handler_add(GPIO_INPUT_IO_0, gpio_isr_handler, (void*) GPIO_INPUT_IO_0);
+    gpio_isr_handler_add(GPIO_INPUT_IO_1, gpio_isr_handler, (void*) GPIO_INPUT_IO_1);
 
     //=============================
     // Tasks initializations
@@ -487,13 +523,13 @@ static void obtain_time(time_t *local_now, struct tm *local_timeinfo){
 
     // Store in `now` the UNIX timestamp
     time(local_now);
-    // Store in `timeinfo` a human readable format
+    // Store in `timeinfo` a human readable format including the Time Zone configured in main
     localtime_r(local_now, local_timeinfo);
 
     #if DEBUG
 	    // Print local time (Debug Only)
 	    strftime(strftime_buf, sizeof(strftime_buf), "%c", local_timeinfo);
-	    ESP_LOGI(TAG_2, "The current date/time in Brazil is: %s", strftime_buf);
+	    ESP_LOGI(TAG_2, "The current date/time is: %s", strftime_buf);
 	#endif
 }
 

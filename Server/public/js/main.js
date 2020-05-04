@@ -376,3 +376,85 @@ $('#datepicker_temperature').datepicker({
 
       zoomToIndex(minmin, maxmax, 'Temperature');
     });
+
+$('#datepicker_humidity').datepicker({ 
+  dateFormat: 'dd/mm/yy',
+  showOtherMonths: true,
+  showOtherMonths: true }).on("change", function() {
+    // Get date from input form
+    var datePicker = document.getElementById('datepicker_humidity').value;
+    console.log(datePicker);
+  
+    // Structure date
+    var structuredDatePicker = [datePicker.substr(0,2),datePicker.substr(3,2),datePicker.substr(6,4)];
+    console.log(structuredDatePicker);
+  
+    // Create a date variable
+    var d = new Date(structuredDatePicker[2],structuredDatePicker[1]-1,structuredDatePicker[0]);
+    console.log(d);
+  
+    // Transform its value to UNIX timestamp, if Brazil, GMT-3, subtracts 3*3600*1000
+    // Turns out that it is not necessary to subtract the value since when returning to front end
+    // in zoom function, it does the timezone again
+    var transformedDate = Date.parse(d)/*-10800000*/;
+    console.log(transformedDate);
+  
+    var minmin = function() {
+      for (var i=0; i<time.length;i++){
+        if (time[i]>=transformedDate){
+          return i;
+        }
+      }
+    }();
+
+    var maxmax = function() {
+      for (var i=0; i<time.length;i++){
+        if (time[i]>=(transformedDate+(24*3600*1000))){
+          return i;
+        }
+      }
+    }();
+
+    zoomToIndex(minmin, maxmax, 'Humidity');
+  });
+
+$('#datepicker_status').datepicker({ 
+  dateFormat: 'dd/mm/yy',
+  showOtherMonths: true,
+  showOtherMonths: true }).on("change", function() {
+    // Get date from input form
+    var datePicker = document.getElementById("datepicker_status").value;
+    console.log(datePicker);
+  
+    // Structure date
+    var structuredDatePicker = [datePicker.substr(0,2),datePicker.substr(3,2),datePicker.substr(6,4)];
+    console.log(structuredDatePicker);
+  
+    // Create a date variable
+    var d = new Date(structuredDatePicker[2],structuredDatePicker[1]-1,structuredDatePicker[0]);
+    console.log(d);
+  
+    // Transform its value to UNIX timestamp, if Brazil, GMT-3, subtracts 3*3600*1000
+    // Turns out that it is not necessary to subtract the value since when returning to front end
+    // in zoom function, it does the timezone again
+    var transformedDate = Date.parse(d)/*-10800000*/;
+    console.log(transformedDate);
+  
+    var minmin = function() {
+      for (var i=0; i<time.length;i++){
+        if (time[i]>=transformedDate){
+          return i;
+        }
+      }
+    }();
+
+    var maxmax = function() {
+      for (var i=0; i<time.length;i++){
+        if (time[i]>=(transformedDate+(24*3600*1000))){
+          return i;
+        }
+      }
+    }();
+
+    zoomToIndex(minmin, maxmax, 'statusChart');
+  });
