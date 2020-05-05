@@ -7,6 +7,7 @@ const yStatusLabels = {
   2 : 'Stopped',
 };
 
+
 var motor_label = document.getElementById("motorLabel").textContent;
 
 var firebaseConfig = {
@@ -30,7 +31,7 @@ window.addEventListener('load', () => {
   var database = firebase.database().ref(motor_label);
   //firebase.database.enableLogging(true);
 
-  database.on('value', function(snapshot) {
+  database.once('value', function(snapshot) {
     let snap = snapshot.val(); // vai ter todo o objeto
     for (i in snap){ // vai iterar em cada key
       for (n in snap[i]){
@@ -97,6 +98,38 @@ window.addEventListener('load', () => {
     drawGraph(time, state, 'Operation', 'statusChart', 'Status: %v', 'stepped', '#689167', 1);
     // drawGraphMatrix(time, matrixTemp, 'Temperature [ºC]', 'noCu', 'Temperature: %v ºC', 'spline', '#C6BD74', 45);
   });
+
+  var databaseSP = firebase.database().ref('sp_time/'+motor_label);
+  databaseSP.once('value', function(snapshot){
+    let currentSPTime = snapshot.val();
+    document.getElementById("currentSP").innerHTML = "Current SP time: " + currentSPTime + " s";
+  });
+
+  document.getElementById("changeSPTime").onclick = () => { 
+    if (spTime.value>0){
+      databaseSP.set(parseInt(spTime.value));
+      location.reload();
+    }
+  };
+
+  var databaseStatus = firebase.database().ref('status/'+motor_label);
+  // console.log(document.getElementById("status").textContent);
+  // if (current_state==2){
+  //   databaseStatus.set(2);
+  // }
+  // else if (current_state==1){
+  //   databaseStatus.set(1);
+  // }
+  // else if (current_state==0){
+  //   databaseStatus.set(0);
+  // }
+
+
+  document.getElementById("resetButton").onclick = () => { 
+    databaseStatus.set(1);
+  };
+  
+  var spTime = document.getElementById('SPTime');
 });
 
 function format_hour(seconds){
