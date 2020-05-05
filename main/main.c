@@ -102,6 +102,7 @@ static xQueueHandle gpio_evt_queue = NULL;
 //==========================
 // Function definitions
 //==========================
+static void bufferUpdate(void);
 static void update_sntp_time(void);
 static void get_last_value(void);
 static void update_frontEndStatus(char *motorStatusAddress);
@@ -110,7 +111,7 @@ void time_sync_notification_cb(struct timeval *tv);
 static void obtain_time(time_t *local_now, struct tm *local_timeinfo); // only need this function to check if it is midnight
 static void wifi_connection_start(void);
 static void wifi_connection_begin(void);
-// static void wifi_connection_end(void);
+static void wifi_connection_end(void);
 esp_err_t _http_event_handler(esp_http_client_event_t *evt);
 static void IRAM_ATTR gpio_isr_handler(void* arg);
 //==========================
@@ -125,7 +126,7 @@ static void IRAM_ATTR gpio_isr_handler(void* arg);
 uint8_t temperature = 0;
 uint8_t humidity = 0;
 // Global variables to handle the status of the motor
-uint8_t motorStatus = 1; // It starts on
+uint8_t motorStatus = 0; // It starts off
 time_t runningTime = 0;
 time_t continuousRunningTime = 0;
 
@@ -161,9 +162,25 @@ uint8_t frontEndReset = 0;
 // Tasks
 //==========================
 
-// Task that controls the motor operation, turning it on, off
-void motor_control_task(void* arg) {
+// Task that controls the motor operation
+// Regarding to the NC switch values, motor status and reset button
+void motor_control_task(void* arg) {	
     uint8_t io_num;
+    // First we check the state of the button.
+    if(gpio_get_level(GPIO_INPUT_IO_0)){
+    	// NC not pressed
+        // Turn on the motor
+    	gpio_set_level(GPIO_OUTPUT_IO_0, 1);
+    	// Update status
+        motorStatus = 1;
+    }
+    else {
+		// NC pressed
+	    // Turn off the motor
+    	gpio_set_level(GPIO_OUTPUT_IO_0, 0);
+    	// Update status
+        motorStatus = 0;
+    }
     while(1) {
         // When receives an event on the gpio queue
         if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
@@ -266,18 +283,11 @@ void motor_supervisor_task(void *arg) {
     	humidity = DHT11_read().humidity;
 
     	// Only store data if it is valid and if the motor changed its state
-    	if(temperature<=70 && humidity<=100 && (internalCounter==59 || currentState!=lastState)){
+    	if(temperature<=70 && humidity<=100 && (internalCounter>=60 || currentState!=lastState)){
     		// Reset internalCounter
-    		internalCounter=0;
-    		// obtain_time(&now, &timeInfo);
-	     	// strftime(strftime_db, sizeof(strftime_db), "%c", &timeInfo);
-    		time(&now); // Does not take into consideration the time zone
-
-	        size = sprintf (bufferData[bufferCounter],
-	        		"{ \"T\" : %d, \"H\" : %d, \"S\" : %d, \"D\" : %ld, \"DO\" : %ld, \"CO\" : %ld }",
-	        		temperature, humidity, motorStatus, now, runningTime, continuousRunningTime);
-	        bufferCounter++;
-	        lastState=currentState;
+			internalCounter=0;
+    		bufferUpdate();
+    		lastState=currentState;
 	    }
 
 	    internalCounter++;
@@ -293,12 +303,13 @@ void database_task(void *pvParameters){
 
     // Wait for for the first update
     vTaskDelay(20000/portTICK_RATE_MS);
+    bufferUpdate();
 
     while(1){
+    	wifi_connection_start();
 
-    	// bufferCounter is always 1 ahead of the number of data stored in buffer
+    	// bufferCounter is always 1 ahead of the number of data stored in buffer, so we use < instead of <=
 	    for(int i=0; i<bufferCounter; i++){
-
 	        // ======================================
 	        // Start POST request
 	        // ======================================
@@ -370,6 +381,7 @@ void database_task(void *pvParameters){
     	get_sp_time(motorAddress);
     	update_frontEndStatus(motorAddress);
 
+    	wifi_connection_end();
         // Wait for another update: 1 minute
         vTaskDelay(60000/portTICK_RATE_MS);
 
@@ -402,8 +414,8 @@ void app_main() {
     io_conf.pull_up_en = 0;
     // Configure GPIO with the given settings
     gpio_config(&io_conf);
-    // Start the gpio in High value
-    gpio_set_level(GPIO_OUTPUT_IO_0, 1);
+    // Start the gpio in Low value
+    gpio_set_level(GPIO_OUTPUT_IO_0, 0);
 
     // Interrupt in any edge
     io_conf.intr_type = GPIO_INTR_ANYEDGE;
@@ -422,7 +434,6 @@ void app_main() {
     //=============================
 
     wifi_connection_begin();
-    wifi_connection_start();
 
     //=============================
     // RTC configuration
@@ -502,11 +513,20 @@ void app_main() {
 // Functions
 //==========================
 
+static void bufferUpdate(void){
+	
+	// obtain_time(&now, &timeInfo);
+ 	// strftime(strftime_db, sizeof(strftime_db), "%c", &timeInfo);
+	time(&now); // Does not take into consideration the time zone
+
+    size = sprintf (bufferData[bufferCounter],
+    		"{ \"T\" : %d, \"H\" : %d, \"S\" : %d, \"D\" : %ld, \"DO\" : %ld, \"CO\" : %ld }",
+    		temperature, humidity, motorStatus, now, runningTime, continuousRunningTime);
+    bufferCounter++;
+}
+
 static void get_last_value(void){
 
-	#if CONFIG_debug
-		ESP_LOGI(TAG_4, "Initializing Update");
-	#endif
 
     // ======================================
     // Start GET request
@@ -526,6 +546,8 @@ static void get_last_value(void){
 
 }
 static void get_sp_time(char *motorSPAddress){
+	uint32_t lastReading=spTimesec;
+	uint32_t currentReading;
 
 	#if CONFIG_debug
 		ESP_LOGI(TAG_4, "Initializing Update");
@@ -575,7 +597,12 @@ static void get_sp_time(char *motorSPAddress){
         esp_http_client_read(client, valor, esp_http_client_get_content_length(client));
 
         cJSON *root = cJSON_Parse(valor);
-        spTimesec = cJSON_GetObjectItem(root,motorSPAddress)->valueint;
+        currentReading = cJSON_GetObjectItem(root,motorSPAddress)->valueint;
+        cJSON_Delete(root);
+        if(currentReading!=lastReading){
+        	spTimesec=currentReading;
+        	continuousRunningTime=0;
+        }
         //============
         // CONFIG_debug, but, in the future, perform a verification that the message was sent
         // char valor[77];
@@ -642,6 +669,7 @@ static void update_frontEndStatus(char *motorStatusAddress){
 
 	        cJSON *root = cJSON_Parse(valor);
 	        frontEndReset = cJSON_GetObjectItem(root,motorStatusAddress)->valueint;
+	        cJSON_Delete(root);
 	        //============
 	        // CONFIG_debug, but, in the future, perform a verification that the message was sent
 	        // char valor[77];
@@ -664,6 +692,7 @@ static void update_frontEndStatus(char *motorStatusAddress){
 
 
 static void update_sntp_time(void) {
+	wifi_connection_start();
 	#if CONFIG_debug
 		ESP_LOGI(TAG, "Initializing SNTP");
 	#endif
@@ -689,6 +718,7 @@ static void update_sntp_time(void) {
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
     sntp_stop();
+    wifi_connection_end();
 }
 
 void time_sync_notification_cb(struct timeval *tv) {
@@ -730,9 +760,9 @@ static void wifi_connection_start(void){
     ESP_ERROR_CHECK(example_connect());
 }
 
-// static void wifi_connection_end(void){
-//     ESP_ERROR_CHECK( example_disconnect() );
-// }
+static void wifi_connection_end(void){
+    ESP_ERROR_CHECK( example_disconnect() );
+}
 
 // When hardware interrupts occurs on the pre-determined pin, it calls this functions which inserts and event on the queue
 static void IRAM_ATTR gpio_isr_handler(void* arg) {
