@@ -99,15 +99,12 @@ static xQueueHandle gpio_evt_queue = NULL;
 	static const char *TAG_4 = "Update values";
 #endif
 
-static const char *motorAddress = CONFIG_motorValue;
-static const char *firebaseAddress = CONFIG_firebaseAddress;
-uint32_t spTimesec = CONFIG_SPTimesec;
-
 //==========================
 // Function definitions
 //==========================
 static void update_sntp_time(void);
-static void update_last_value(void);
+static void get_last_value(void);
+static void get_frontEnd_status(char *motorStatusAddress);
 static void get_sp_time(char *motorSPAddress);
 void time_sync_notification_cb(struct timeval *tv);
 static void obtain_time(time_t *local_now, struct tm *local_timeinfo); // only need this function to check if it is midnight
@@ -150,6 +147,10 @@ char bufferData[60][120];	//  { "T" : 28, "H" : "78", "S" : "ON", "D" : 12314554
 uint8_t bufferCounter=0;
 int size;
 char strftime_db[26];
+static const char *motorAddress = CONFIG_motorValue;
+static const char *firebaseAddress = CONFIG_firebaseAddress;
+uint32_t spTimesec = CONFIG_SPTimesec;
+uint8_t frontEndStatus = 2;
 
 //==========================
 // End Variable definitions
@@ -180,7 +181,7 @@ void motor_control_task(void* arg) {
                 // Update status
                 motorStatus = 0;
             }
-            if(io_num==GPIO_INPUT_IO_1 && gpio_get_level(io_num)==0 && motorStatus==2) {
+            if(io_num==GPIO_INPUT_IO_1 && gpio_get_level(io_num)==0 && motorStatus==2 ) {
                 // Reset Motor
                 gpio_set_level(GPIO_OUTPUT_IO_0, 1);
                 // Reset its state
@@ -189,6 +190,7 @@ void motor_control_task(void* arg) {
                 gpio_set_level(GPIO_OUTPUT_IO_1, 0);
                 // Reset continuous time operation
                 continuousRunningTime=0;
+                frontEndStatus=2;
             }
         }
     }
@@ -247,6 +249,14 @@ void motor_supervisor_task(void *arg) {
 			continuousRunningTime = 0;
 			currentState=motorStatus;
 		}
+		else if (motorStatus==2 && frontEndStatus==1){
+			// Turn off the Alert LED
+            gpio_set_level(GPIO_OUTPUT_IO_1, 0);
+            // Turn on the motor
+            gpio_set_level(GPIO_OUTPUT_IO_0, 1);
+            // Set status to operating
+            motorStatus=1;
+		}
     	// Update temperature
    		temperature = DHT11_read().temperature;
     	// Update humidity
@@ -283,6 +293,7 @@ void database_task(void *pvParameters){
 
     while(1){
     	wifi_connection_start();
+    	get_frontEnd_status(motorAddress);
 
     	// bufferCounter is always 1 ahead of the number of data stored in buffer
 	    for(int i=0; i<bufferCounter; i++){
@@ -443,7 +454,7 @@ void app_main() {
     // End of RTC configuration
     //=============================
 
-    update_last_value();
+    get_last_value();
 
 
 
@@ -489,7 +500,7 @@ void app_main() {
 // Functions
 //==========================
 
-static void update_last_value(void){
+static void get_last_value(void){
 	wifi_connection_start();
 
 	#if CONFIG_debug
@@ -584,6 +595,70 @@ static void get_sp_time(char *motorSPAddress){
     // ======================================
     // End of GET request
     // ======================================
+
+}
+
+static void get_frontEnd_status(char *motorStatusAddress){
+
+	if (motorStatus == 2){
+		// Create url
+		sprintf(url, "https://%s/status.json",firebaseAddress);
+
+	    // Struct which contains the HTTP configuration
+	    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv424esp_http_client_config_t
+	    esp_http_client_config_t config = {
+	    .url = url,
+	    .event_handler = _http_event_handler,
+	    };
+
+	    // Call the client init passing the config struct to start a HTTP session
+	    // It returns a esp_http_client_handle_t that you must use as input to other functions in the interface
+	    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_initPK24esp_http_client_config_t
+	    esp_http_client_handle_t client = esp_http_client_init(&config);
+
+	    // client_open will open the connection, write all header strings and return ESP_OK if all went well
+	    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
+	    if (esp_http_client_open(client, 0) == ESP_OK) {
+	    	#if CONFIG_debug
+	    		ESP_LOGI(TAG_1, "Connection opened");
+	    	#endif
+	        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
+	        esp_http_client_fetch_headers(client);
+	        //ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
+	        if (esp_http_client_get_status_code(client)==200){
+	        	#if CONFIG_debug
+	            	ESP_LOGI(TAG_1, "Message successfuly sent!");
+	            #endif
+	        }
+	        else {
+	        	#if CONFIG_debug
+	        	   	ESP_LOGI(TAG_1, "Sending message failed!");
+	        	#endif
+	        }
+
+	        char valor[esp_http_client_get_content_length(client)];
+	        // Read the stream of data
+	        esp_http_client_read(client, valor, esp_http_client_get_content_length(client));
+
+	        cJSON *root = cJSON_Parse(valor);
+	        frontEndStatus = cJSON_GetObjectItem(root,motorStatusAddress)->valueint;
+	        //============
+	        // CONFIG_debug, but, in the future, perform a verification that the message was sent
+	        // char valor[77];
+	        // // Read the stream of data
+	        // esp_http_client_read(client, valor, 77);
+	        // printf("%s\n",valor);
+	        // CONFIG_debug
+	        //============
+
+	        esp_http_client_close(client);
+	    }
+	    else {
+	    	#if CONFIG_debug
+	    	    ESP_LOGE(TAG_1, "Connection failed");
+	    	#endif
+	    }
+	}
 
 }
 
