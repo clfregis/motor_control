@@ -35,8 +35,8 @@ window.addEventListener('load', () => {
   // Get a reference to the database service
   var database = firebase.database().ref(motor_label);
   //firebase.database.enableLogging(true);
-  // Read the database once, capture the values, update page and draw graphs
-  database.once('value', function(snapshot) {
+  // Read the database continuously, capture the values, update page and draw graphs
+  database.on('value', function(snapshot) {
     let snap = snapshot.val(); // vai ter todo o objeto
     for (i in snap){ // vai iterar em cada key
       for (n in snap[i]){
@@ -99,8 +99,26 @@ window.addEventListener('load', () => {
     }
   };
 
-  var databaseStatus = firebase.database().ref('status/'+motor_label);
-  // console.log(document.getElementById("status").textContent);
+  function getDataFromServer(callback){
+    if(typeof callback === 'function'){
+      setTimeout(function(){
+        callback();
+    },5000)
+    }
+  }
+
+  // If the motor is halted, then the reset button has effect
+  function updateFrontEndStatus (){
+    var databaseStatus = firebase.database().ref('front_end_reset_status/'+motor_label);
+    if(status=='Halted'){
+      console.log('WTF?');
+      document.getElementById("resetButton").onclick = () => { 
+        databaseStatus.set(1);
+      };
+    }
+  }
+
+  getDataFromServer(updateFrontEndStatus);
   // if (current_state==2){
   //   databaseStatus.set(2);
   // }
@@ -110,11 +128,6 @@ window.addEventListener('load', () => {
   // else if (current_state==0){
   //   databaseStatus.set(0);
   // }
-
-
-  document.getElementById("resetButton").onclick = () => { 
-    databaseStatus.set(1);
-  };
   
 });
 

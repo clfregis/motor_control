@@ -104,7 +104,7 @@ static xQueueHandle gpio_evt_queue = NULL;
 //==========================
 static void update_sntp_time(void);
 static void get_last_value(void);
-static void get_frontEnd_status(char *motorStatusAddress);
+static void update_frontEndStatus(char *motorStatusAddress);
 static void get_sp_time(char *motorSPAddress);
 void time_sync_notification_cb(struct timeval *tv);
 static void obtain_time(time_t *local_now, struct tm *local_timeinfo); // only need this function to check if it is midnight
@@ -132,7 +132,7 @@ time_t continuousRunningTime = 0;
 time_t now;
 struct tm timeInfo;
 
-char url[62];
+char url[65];
 char bufferData[60][120];	//  { "T" : 28, "H" : "78", "S" : "ON", "D" : 12314554, "DO" : 1588033061, "CO" : 358 }
 							// T=Temperature, H = Humidity, S=Status, D=Date, DO=Daily Operation, CO=Continuous Operation
 							// Example
@@ -150,7 +150,7 @@ char strftime_db[26];
 static const char *motorAddress = CONFIG_motorValue;
 static const char *firebaseAddress = CONFIG_firebaseAddress;
 uint32_t spTimesec = CONFIG_SPTimesec;
-uint8_t frontEndStatus = 2;
+uint8_t frontEndReset = 0;
 
 //==========================
 // End Variable definitions
@@ -181,7 +181,7 @@ void motor_control_task(void* arg) {
                 // Update status
                 motorStatus = 0;
             }
-            if(io_num==GPIO_INPUT_IO_1 && gpio_get_level(io_num)==0 && motorStatus==2 ) {
+            if(io_num==GPIO_INPUT_IO_1 && gpio_get_level(io_num)==0 && motorStatus==2) {
                 // Reset Motor
                 gpio_set_level(GPIO_OUTPUT_IO_0, 1);
                 // Reset its state
@@ -190,7 +190,7 @@ void motor_control_task(void* arg) {
                 gpio_set_level(GPIO_OUTPUT_IO_1, 0);
                 // Reset continuous time operation
                 continuousRunningTime=0;
-                frontEndStatus=2;
+                frontEndReset=2;
             }
         }
     }
@@ -249,13 +249,16 @@ void motor_supervisor_task(void *arg) {
 			continuousRunningTime = 0;
 			currentState=motorStatus;
 		}
-		else if (motorStatus==2 && frontEndStatus==1){
+		else if (motorStatus==2 && frontEndReset==1){
 			// Turn off the Alert LED
             gpio_set_level(GPIO_OUTPUT_IO_1, 0);
             // Turn on the motor
             gpio_set_level(GPIO_OUTPUT_IO_0, 1);
             // Set status to operating
             motorStatus=1;
+            // Reset the frontEndReset
+            frontEndReset=0;
+            //Update frontEndReset to firebase
 		}
     	// Update temperature
    		temperature = DHT11_read().temperature;
@@ -293,7 +296,6 @@ void database_task(void *pvParameters){
 
     while(1){
     	wifi_connection_start();
-    	get_frontEnd_status(motorAddress);
 
     	// bufferCounter is always 1 ahead of the number of data stored in buffer
 	    for(int i=0; i<bufferCounter; i++){
@@ -367,6 +369,7 @@ void database_task(void *pvParameters){
     	// Clean buffer? I don't think so, we overwrite old data
 
     	get_sp_time(motorAddress);
+    	update_frontEndStatus(motorAddress);
         wifi_connection_end();
 
         // Wait for another update: 1 minute
@@ -598,11 +601,11 @@ static void get_sp_time(char *motorSPAddress){
 
 }
 
-static void get_frontEnd_status(char *motorStatusAddress){
+static void update_frontEndStatus(char *motorStatusAddress){
 
 	if (motorStatus == 2){
 		// Create url
-		sprintf(url, "https://%s/status.json",firebaseAddress);
+		sprintf(url, "https://%s/front_end_reset_status/.json",firebaseAddress);
 
 	    // Struct which contains the HTTP configuration
 	    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv424esp_http_client_config_t
@@ -641,7 +644,7 @@ static void get_frontEnd_status(char *motorStatusAddress){
 	        esp_http_client_read(client, valor, esp_http_client_get_content_length(client));
 
 	        cJSON *root = cJSON_Parse(valor);
-	        frontEndStatus = cJSON_GetObjectItem(root,motorStatusAddress)->valueint;
+	        frontEndReset = cJSON_GetObjectItem(root,motorStatusAddress)->valueint;
 	        //============
 	        // CONFIG_debug, but, in the future, perform a verification that the message was sent
 	        // char valor[77];
