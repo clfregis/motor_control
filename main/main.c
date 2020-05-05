@@ -110,7 +110,7 @@ void time_sync_notification_cb(struct timeval *tv);
 static void obtain_time(time_t *local_now, struct tm *local_timeinfo); // only need this function to check if it is midnight
 static void wifi_connection_start(void);
 static void wifi_connection_begin(void);
-static void wifi_connection_end(void);
+// static void wifi_connection_end(void);
 esp_err_t _http_event_handler(esp_http_client_event_t *evt);
 static void IRAM_ATTR gpio_isr_handler(void* arg);
 //==========================
@@ -295,7 +295,6 @@ void database_task(void *pvParameters){
     vTaskDelay(20000/portTICK_RATE_MS);
 
     while(1){
-    	wifi_connection_start();
 
     	// bufferCounter is always 1 ahead of the number of data stored in buffer
 	    for(int i=0; i<bufferCounter; i++){
@@ -370,7 +369,6 @@ void database_task(void *pvParameters){
 
     	get_sp_time(motorAddress);
     	update_frontEndStatus(motorAddress);
-        wifi_connection_end();
 
         // Wait for another update: 1 minute
         vTaskDelay(60000/portTICK_RATE_MS);
@@ -424,6 +422,7 @@ void app_main() {
     //=============================
 
     wifi_connection_begin();
+    wifi_connection_start();
 
     //=============================
     // RTC configuration
@@ -504,7 +503,6 @@ void app_main() {
 //==========================
 
 static void get_last_value(void){
-	wifi_connection_start();
 
 	#if CONFIG_debug
 		ESP_LOGI(TAG_4, "Initializing Update");
@@ -525,7 +523,6 @@ static void get_last_value(void){
     // ======================================
 
 	// Connect to firebase, gg
-	wifi_connection_end();
 
 }
 static void get_sp_time(char *motorSPAddress){
@@ -667,8 +664,6 @@ static void update_frontEndStatus(char *motorStatusAddress){
 
 
 static void update_sntp_time(void) {
-	wifi_connection_start();
-
 	#if CONFIG_debug
 		ESP_LOGI(TAG, "Initializing SNTP");
 	#endif
@@ -694,7 +689,6 @@ static void update_sntp_time(void) {
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
     sntp_stop();
-    wifi_connection_end();
 }
 
 void time_sync_notification_cb(struct timeval *tv) {
@@ -736,9 +730,9 @@ static void wifi_connection_start(void){
     ESP_ERROR_CHECK(example_connect());
 }
 
-static void wifi_connection_end(void){
-    ESP_ERROR_CHECK( example_disconnect() );
-}
+// static void wifi_connection_end(void){
+//     ESP_ERROR_CHECK( example_disconnect() );
+// }
 
 // When hardware interrupts occurs on the pre-determined pin, it calls this functions which inserts and event on the queue
 static void IRAM_ATTR gpio_isr_handler(void* arg) {
