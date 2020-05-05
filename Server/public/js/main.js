@@ -70,7 +70,13 @@ window.addEventListener('load', () => {
     status = yStatusLabels[current_state];
     current_motor = currentMotor[motor_label];
     // Update page elements with values retrieved from firebase
-    document.getElementById("status").innerHTML = "Status: " + status;
+    const timestamp = new Date().getTime();
+    if((timestamp-current_time)>=(10*60*1000)){
+      document.getElementById("status").innerHTML = "Status: Offline";
+    }
+    else{
+      document.getElementById("status").innerHTML = "Status: " + status;
+    }
     document.getElementById("nameMotor").innerHTML = "Name: " + current_motor;
     document.getElementById("currentTemperature").innerHTML = "Temperature: " + current_temp + "ºC";
     document.getElementById("currentHumidity").innerHTML = "Humidity: " + current_hum + "%";
@@ -93,7 +99,7 @@ window.addEventListener('load', () => {
   var letSPTime = document.getElementById('SPTime');
   // Set this value on the database upon clicking
   document.getElementById("changeSPTime").onclick = () => { 
-    if (letSPTime.value>0){
+    if (letSPTime.value>65){
       databaseSP.set(parseInt(letSPTime.value));
       location.reload();
     }
@@ -101,20 +107,27 @@ window.addEventListener('load', () => {
 
   function getDataFromServer(callback){
     if(typeof callback === 'function'){
-      setTimeout(function(){
+      setInterval(function(){
         callback();
-    },5000)
+    },1000)
     }
   }
 
   // If the motor is halted, then the reset button has effect
   function updateFrontEndStatus (){
     var databaseStatus = firebase.database().ref('front_end_reset_status/'+motor_label);
+
     if(status=='Halted'){
-      console.log('WTF?');
       document.getElementById("resetButton").onclick = () => { 
         databaseStatus.set(1);
+        // Loading
+        document.getElementById("loader").style.display = "block";
       };
+    }
+    if(status=='Operating' || status=='Stopped'){
+      // Stop loading
+      document.getElementById("loader").style.display = "none";
+      databaseStatus.set(0);
     }
   }
 
