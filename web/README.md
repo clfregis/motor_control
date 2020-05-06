@@ -8,6 +8,7 @@ The `web` folder is basically the front end. It consists of the web interface, w
 ## HTML
 
  The structure of HTML files is:
+ 
  	|-index.html
  	|---motor_1.html
  	|---motor_2.html
@@ -22,6 +23,7 @@ The `web` folder is basically the front end. It consists of the web interface, w
 ## CSS
 
  The structure of CSS files is:
+ 
  	|-all.css
  	|-dashboard.css
  	|-jquery-ui.css
@@ -37,7 +39,7 @@ There are only one JS file, the `main.js`, which contains the interface to the f
 
 For Firebase hosting, please refer to its [documentation](https://firebase.google.com/docs/hosting/?authuser=0#implementation_path). With respect to the database, we have pretty much the following structure:
 
-`	root {
+	`root {
 		motor_1: {
 			- M61_vCVgkNTwwjbF5MB : {
 				CO: 60,
@@ -67,6 +69,7 @@ For Firebase hosting, please refer to its [documentation](https://firebase.googl
 
 
 The `motor_X` childs receive informations from motors every minute. Back End writes to this child and Front End only reads. the format is the following:
+
 	`- M61_vCVgkNTwwjbF5MB : {
 				CO: 60,
 				D: 1588107627,
