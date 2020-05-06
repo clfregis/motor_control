@@ -52,7 +52,7 @@ It is important to be aware of what model of ESP 32 Development board to use. Th
 
 ## Future Implementations
 
-+ Add [licesing](https://forum.mysensors.org/topic/3096/open-hardware-licensing).
++ Add [licensing](https://forum.mysensors.org/topic/3096/open-hardware-licensing).
 + Change PTH to SMD components to reduce size.
 + Add LEDs to show operation processes (blink fast when looking for internet connection, blink slow when is working properly, etc).
 + Instead of using DoIT ESP32 DevKit V1 board, put the ESP32 microcontroller directly into PCB.
