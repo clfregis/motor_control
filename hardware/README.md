@@ -34,20 +34,20 @@ It is important to be aware of what model of ESP 32 Development board to use. Th
 
 ## BOM
 
-|Designator|Comment                    |Description                        |Quantity|Value |Reference Link    |
-|----------|---------------------------|-----------------------------------|--------|------|------------------|
-|D1        |Diode                      |Rectifier Diode 1N4007             |1       |1N4007|[1N4007]()        |
-|L1        |Red LED                    |5mm Red LED                        |1       |      |[5mm Red LED]()   |
-|Q1        |Transistor                 |NPN General Purpose Amplifier      |1       |PN2222|[PN2222]()        |
-|R1        |Resistor                   |1/4 W Resistor 1K 5%               |1       |1K    |[1K]()            |
-|R2, R3, R5|Resistor                   |1/4 W Resistor 10K 5%              |3       |10K   |[10K]()           |
-|R4        |Resistor                   |1/4 W Resistor 300R 5%             |1       |300R  |[300R]()          |
-|RLY1      |Relay                      |5V Relay                           |1       |      |[5V]()            |
-|S1        |Switch                     |Switch Pushbutton                  |1       |      |[Switch]()        |
-|T1        |Terminal                   |3-Way Screw Terminal               |1       |      |[Screw Terminal]()|
-|T2        |JST                        |JST Male Board Connector           |1       |      |[JST Connector]() |
-|T3,T4     |Not in Schematic (Optional)|Female Pin Header 15x2.54mm (Pitch)|2       |      |[Pin Header]()    |
-|U1        |ESP32 Dev Kit V1           |DoIT Development board             |1       |      |[ESP32]()         |
+|Designator|Comment                    |Description                        |Quantity|Value |Reference Link                                                          |
+|----------|---------------------------|-----------------------------------|--------|------|------------------------------------------------------------------------|
+|D1        |Diode                      |Rectifier Diode 1N4007             |1       |1N4007|[1N4007](https://lcsc.com/product-detail/Others_GW-1N4007_C331633.html) |
+|L1        |Red LED                    |5mm Red LED                        |1       |      |[5mm Red LED](https://lcsc.com/product-detail/Others_TOGIALED-TJ-L5FYTGHRMBCSFLC4R-A5_C331027.html)|
+|Q1        |Transistor                 |NPN General Purpose Amplifier      |1       |PN2222|[PN2222](https://lcsc.com/product-detail/Transistors-NPN-PNP_ON-Semiconductor-ON-PN2222ATFR_C184875.html)|
+|R1        |Resistor                   |1/4 W Resistor 1K 5%               |1       |1K    |[1K](https://lcsc.com/product-detail/Carbon-Film-Resistors_CCO-Chian-Chia-Elec-CF1-4W-1KR-5-T52_C120055.html)|
+|R2, R3, R5|Resistor                   |1/4 W Resistor 10K 5%              |3       |10K   |[10K](https://lcsc.com/product-detail/Carbon-Film-Resistors_UNI-ROYAL-Uniroyal-Elec-CFR0W4J0103A50_C61299.html)|
+|R4        |Resistor                   |1/4 W Resistor 300R 5%             |1       |300R  |[300R](https://lcsc.com/product-detail/Carbon-Film-Resistors_UNI-ROYAL-Uniroyal-Elec-CFR0W4J0301A50_C69881.html)|
+|RLY1      |Relay                      |5V Relay                           |1       |      |[5V](https://lcsc.com/product-detail/Relays_SRD-05VDC-SL-C_C35449.html)|
+|S1        |Switch                     |Switch Pushbutton                  |1       |      |[Switch](https://lcsc.com/product-detail/Tactile-Switches_Korean-Hroparts-Elec-K2-6639DP-V4SW-04_C89914.html)|
+|T1        |Terminal                   |3-Way Screw Terminal               |1       |      |[Screw Terminal](https://lcsc.com/product-detail/Screw-terminal_DIBO-DB126V-5-0-3P_C395850.html)|
+|T2        |JST                        |JST Male Board Connector           |1       |      |[JST Connector](https://lcsc.com/product-detail/Wire-To-Board-Wire-To-Wire-Connector_JST-Sales-America_B2B-XH-2-LF-SN_JST-Sales-America-B2B-XH-2-LF-SN_C158014.html)|
+|T3,T4     |Not in Schematic (Optional)|Female Pin Header 15x2.54mm (Pitch)|2       |      |[Pin Header](https://lcsc.com/product-detail/Pin-Header-Female-Header_Ckmtw-Shenzhen-Cankemeng-C124408_C124408.html)|
+|U1        |ESP32 Dev Kit V1           |DoIT Development board             |1       |      |[ESP32](https://github.com/SmartArduino/SZDOITWiKi/wiki/ESP8266---ESP32)|
 |U2        |DHT22                      |Temperature and Humidity Sensor    |1       |      |[DHT22]()         |
 
 ## Future Implementations
