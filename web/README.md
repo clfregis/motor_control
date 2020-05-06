@@ -81,12 +81,14 @@ The `motor_X` childs receive informations from motors every minute. Back End wri
 
  `- M61_vCVgkNTwwjbF5MB` is a timestamp key automatically created by firebase. It occurs because we are doing POST requests with this information. Each minute, up to 60 of this blocks are updated to the database by the motors, where:
 	 
-+ T = Temperature (ºC)
-+ H = Humidity (%)
-+ S = Status (0 - Off, 1 - Running, 2 - Halted)
-+ D = Date (UNIX timestamp format UTC timezone)
-+ DO = Daily Operation (Seconds)
-+ CO = Continuous Operation (Seconds)
+| Code 	| Meaning 	| Unit 	|
+|------	|----------------------	|------------------------------------	|
+| CO 	| Continuous Operation 	| Seconds 	|
+| D 	| Date 	| UNIX timestamp format UTC timezone 	|
+| DO 	| Daily Operation 	| Seconds 	|
+| H 	| Humidity 	| % 	|
+| S 	| Status 	| 0 - Off, 1 - Running, 2 - Halted 	|
+| T 	| Temperature 	| ºC 	|
 
 The `sp_time` child have the information of SP time operation of each motor. Front End writes to this child and Back End only reads (every minute).
 
