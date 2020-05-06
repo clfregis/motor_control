@@ -1,0 +1,20 @@
+/* Ira fazer o reset padrao das configuracoes do navegador, com relacao ao estilo */
+/* `*` significa que eu pego todos os elementos da pagina */
+* {
+    /* Para todo elemento HTML, tirar a margem, alguns elementos vem por padrao com uma margem */
+    margin: 0; 
+    /* Mesma coisa para o padding */
+    padding: 0;
+    /* Border-box para que todos os elementos, quando vc adicionar uma margem
+    ou um padding eles nao mudem o tamanho. Exemplo: Se eu setar uma largura para 
+    aquele elemento, ele sempre tera aquela largura independente de padding ou margin  */
+    box-sizing: border-box;
+}
+
+/* Altura de 100%, pois a altura em porcentagem so funciona se o elemento pai tenha uma altura definida (no caso
+aqui a gente usa 100%). Sendo assim eu posso colocar altura em porcentagem nas minhas divs, etc, e vai funcionar 
+perfeitamente */
+html, body {
+    height: 100%;
+    background-color: #D1D5D8;
+}
