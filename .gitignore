@@ -1,9 +1,9 @@
 .DS_Store
-build/
-tests/
-sdkconfig
-sdkconfig.old
-anotacoes.md
-sdkconfig
-sdkconfig.old
-Server/old/
+firmware/build/
+firmware/tests/
+firmware/sdkconfig
+firmware/sdkconfig.old
+auxilio/
+firmware/sdkconfig
+firmware/sdkconfig.old
+web/old/
