@@ -39,7 +39,7 @@ There are only one JS file, the `main.js`, which contains the interface to the f
 
 For Firebase hosting, please refer to its [documentation](https://firebase.google.com/docs/hosting/?authuser=0#implementation_path). With respect to the database, we have pretty much the following structure:
 
-	`root {
+	root {
 		motor_1: {
 			- M61_vCVgkNTwwjbF5MB : {
 				CO: 60,
@@ -65,20 +65,21 @@ For Firebase hosting, please refer to its [documentation](https://firebase.googl
 			motor_2 : 750,
 			motor_3 : 800,
 			motor_4 : 300
-		}`
+		}
 
 
 The `motor_X` childs receive informations from motors every minute. Back End writes to this child and Front End only reads. the format is the following:
 
-	`- M61_vCVgkNTwwjbF5MB : {
+	- M61_vCVgkNTwwjbF5MB : {
 				CO: 60,
 				D: 1588107627,
 				DO: 60,
 				H: 88,
 				S: 1,
 				T: 31
-			},`
-`- M61_vCVgkNTwwjbF5MB` is a timestamp key automatically created by firebase. It occurs because we are doing POST requests with this information. Each minute, up to 60 of this blocks are updated to the database by the motors, where:
+			},
+
+ `- M61_vCVgkNTwwjbF5MB` is a timestamp key automatically created by firebase. It occurs because we are doing POST requests with this information. Each minute, up to 60 of this blocks are updated to the database by the motors, where:
 	 
 + T = Temperature (ºC)
 + H = Humidity (%)
