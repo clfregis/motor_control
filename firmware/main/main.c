@@ -102,6 +102,14 @@ static xQueueHandle gpio_evt_queue = NULL;
 //==========================
 // Function definitions
 //==========================
+/*!
+ * @function    bufferUpdate
+ * @abstract    Update the buffer with current values
+ * @discussion  This function take the values of tempertature, 
+ *              humidity, now, runningTime, motorStatus and 
+ *              continuousRunningTime and fetch to buffer
+ * @result      bufferData with a new value
+*/
 static void bufferUpdate(void);
 static void update_sntp_time(void);
 static void get_last_value(void);

@@ -12,10 +12,10 @@ We use the information of operation time for two things:
 1. Stop the motor if it stays running for a long period of time (named SP time). Basically, when the motor runs for a long period of time, it means that the line breaks and material is being spilled outside the hopper.
 2. Record the daily operation of the motor to cross check the material used daily.
 
-### Global Variables
+## Global Variables
 
-The global variables as in an ordinary code can be manipulated by all functions and all tasks. It is not good practice to use global variables in free RTOS, unless you really know what you are doing. The risk of a task change the value of a variable in the middle of execution of other task that also manipulates this same varibale is high. We can use semaphores, queues and other things to maintain our code safe, however, in our case, there is only one task that ever writes to the variable (although many can read from it), then a global variable should not cause a problem.  
-The variables, its type and purpose are organized in the table below:
+The global variables as in an ordinary code can be manipulated by all functions and all tasks. It is not good practice to use global variables in free RTOS, unless you really know what you are doing. The risk of a task change the value of a variable in the middle of execution of other task that also manipulates this same variable is high. We can use semaphores, queues and other things to maintain our code safe, however, in our case, there is only one task that ever writes to the variable (although many can read from it), then a global variable should not cause a problem.  
+The variables, its type and its purpose are organized in the table below:
 
 | Variable name         | Type              | For what it is used                                                               |
 |-----------------------|-------------------|-----------------------------------------------------------------------------------|
@@ -37,7 +37,7 @@ The variables, its type and purpose are organized in the table below:
 | frontEndReset         | uint8_t           | Used to reset the motor by front end                                              |
  
 
-### Tasks
+## Tasks
 
 In free RTOS, we have tasks, which we can think of as pieces of codes that can run concurrently. The definition of a task is much more complex and I recommend to read the Kolban's book on ESP32 where he explains in details the architecture of a task. One thing to keep in mind is that tasks have priorities (the higher the number, higher is its priority), thus, let's say we have two tasks: A (priority 2) and B (priority 3). If A is running and B is ready to run, the task A will stop and then the task B will run. When B finishes, the task A will resume from where it stopped.
 All tasks are shown in the table below.
@@ -50,32 +50,25 @@ All tasks are shown in the table below.
 | database_task | 1 | Every other minute sends the buffer data to database,<br>read SP time modifications in front end and update front end status|url|size, bufferData, spTime and frontEndReset|
 
 
-### Functions
+## Functions
 
 |Function Name|Discussion|Parameters|Result|
 |-------------|----------|----------|------|
 |bufferUpdate|Take the values of tempertature,<br>humidity, now, runningTime, motorStatus and<br>continuousRunningTime and fetch to buffer|void|bufferData with a new value|
 |update_sntp_time|Connect to SNTP server and update system time|void|System time synchronized with UTC time|
 |get_last_value|It takes the last operation times for the current day|void|continuousRunningTime and runningTime updated|
-|update_frontEndStatus|Connect to a child on firebase<br>accordingly to the motorAddress and<br>retrieve its status if it changed<br>since last reading|motorStatusAddress pointer to motorAddress|frontEndStatus with a new value|
-|get_sp_time|Take the values of tempertature,<br>humidity, now, runningTime, motorStatus and<br>continuousRunningTime and fetch to buffer|void|bufferData with a new value|
-|time_sync_notification_cb|Take the values of tempertature,<br>humidity, now, runningTime, motorStatus and<br>continuousRunningTime and fetch to buffer|void|bufferData with a new value|
-|obtain_time|Take the values of tempertature,<br>humidity, now, runningTime, motorStatus and<br>continuousRunningTime and fetch to buffer|void|bufferData with a new value|
-|wifi_connection_start|Take the values of tempertature,<br>humidity, now, runningTime, motorStatus and<br>continuousRunningTime and fetch to buffer|void|bufferData with a new value|
-|wifi_connection_begin|Take the values of tempertature,<br>humidity, now, runningTime, motorStatus and<br>continuousRunningTime and fetch to buffer|void|bufferData with a new value|
-|wifi_connection_end|Take the values of tempertature,<br>humidity, now, runningTime, motorStatus and<br>continuousRunningTime and fetch to buffer|void|bufferData with a new value|
-|IRAM_ATTR gpio_isr_handler|Take the values of tempertature,<br>humidity, now, runningTime, motorStatus and<br>continuousRunningTime and fetch to buffer|void|bufferData with a new value|
+|update_frontEndStatus|Connect to a child on firebase<br>accordingly to the motorAddress and<br>retrieve its status|motorStatusAddress pointer to motorAddress|frontEndStatus with a new value|
+|get_sp_time|Connect to a child on firebase<br>accordingly to the motorAddress and<br>retrieve the SP time if it changed<br>since last reading|motorSPAddress pointer to motorAddress|spTimesec with a new value|
+|time_sync_notification_cb|For Debug purposes. Log on screen<br>when the time is syncrhonized|*tv struct ??|Log on screen|
+|obtain_time|Update now and timeInfo variables with current system time|local_now and local_timeinfo pointers to now and timeInfo variables|now and timeInfo with updated values|
+|wifi_connection_start|Configures the WiFi variables|void|Returns error if configuration fails|
+|wifi_connection_begin|Connect to WiFi in previous configured SSID|void|Returns error if connection fails|
+|wifi_connection_end|Close the connection from WiFi network|void|Returns error if it fails|
+|gpio_isr_handler|Runs every time an interrupt occurs, sending events to a queue|arg contains the number of gpio at wich the hardware interrupt happened|Send events to gpio event queue|
+|http_event_handler|Handles HTTP event queue|evt pointer to HTTP event|Log accordingly to the content of event ID|
 
 
-
-static void get_sp_time(char *motorSPAddress);
-void time_sync_notification_cb(struct timeval *tv);
-static void obtain_time(time_t *local_now, struct tm *local_timeinfo); // only need this function to check if it is midnight
-static void wifi_connection_start(void);
-static void wifi_connection_begin(void);
-static void wifi_connection_end(void);
-esp_err_t _http_event_handler(esp_http_client_event_t *evt);
-static void IRAM_ATTR gpio_isr_handler(void* arg);
+## Future implementations
 
 
 
