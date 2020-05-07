@@ -1,3 +1,6 @@
+// Paste below the Firebase config object
+
+
 var temp = [], hum = [], time = [], state = [], daily = [], continuous = [];
 var status, current_motor;
 const currentMotor = {
@@ -15,16 +18,7 @@ const yStatusLabels = {
 // Update the motor label accordingly to the page loaded
 var motor_label = document.getElementById("motorLabel").textContent;
 
-var firebaseConfig = {
-    apiKey: "AIzaSyA-fPrOStfPGq-Ze_wW3mloB-Qo2AhgU8c",
-    authDomain: "esp32-66ba5.firebaseapp.com",
-    databaseURL: "https://esp32-66ba5.firebaseio.com",
-    projectId: "esp32-66ba5",
-    storageBucket: "esp32-66ba5.appspot.com",
-    messagingSenderId: "502036978763",
-    appId: "1:502036978763:web:5691be205391772c2a01ce",
-    measurementId: "G-85ZFMD2ZK8"
-  };
+
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 
