@@ -1,6 +1,4 @@
-# Motor Control using ESP32 in IDF framework
-### Codes to control a motor, get environment information and send it to a webserver (firebase). For this project I'm using ESP32 in IDF framework.
-
+# Hardware
 ______________
 
 ## 3D Model of the board when mounted

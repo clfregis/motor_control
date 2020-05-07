@@ -325,23 +325,30 @@ void motor_control_task(void* arg) {
 
 // Task that maintain and configure the time and date 
 void clock_task(void *arg) {
+    bool flagClock=false;
 
 	while(1){
-        // Every other second, check if is midnight
-        vTaskDelay(1000/portTICK_RATE_MS);
+        // Every ten minutes, check if is midnight
+        vTaskDelay(600000/portTICK_RATE_MS);
 
         obtain_time(&now, &timeInfo);
 
-        // Correct the drift every night at midnight
-        if (timeInfo.tm_hour==0 && timeInfo.tm_min==0 && timeInfo.tm_sec==0){
-        	#if CONFIG_debug
-        		ESP_LOGI(TAG, "Correct the drift, daily");
-        	#endif
-	        update_sntp_time();
-	        time(&now);
-	        // Update running time to the server
-	        runningTime=0;
-	        continuousRunningTime=0;
+        // Correct the drift every night between midnight and half past midnight
+        if (timeInfo.tm_hour==0 && timeInfo.tm_min>=0 && timeInfo.tm_min<=30){
+            if (!flagClock){
+                flagClock=true;
+                #if CONFIG_debug
+                    ESP_LOGI(TAG, "Correct the drift, daily");
+                #endif
+                update_sntp_time();
+                time(&now);
+                // Update running time to the server
+                runningTime=0;
+                continuousRunningTime=0;
+            }
+        }
+        else {
+            flagClock=false;
         }
 	}
 }
@@ -550,7 +557,7 @@ void app_main() {
     //=============================
 
     // https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
-    #ifdef Brazil 
+    #ifdef CONFIG_Brazil 
         char *timeZone = "<-03>3";
     #else
         char *timeZone = "CST6CDT,M4.1.0,M10.5.0";
