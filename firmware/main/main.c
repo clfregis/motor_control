@@ -2,27 +2,6 @@
  * Motor Control:
  *
  * Code created by engineer Claudio Regis in 06 of April of 2020, Quarantine day 12.
- * This code contains the microcontroller commands and sensor readings of the motor 
- * project.
- *
- * It consists of two outputs (a LED and a relay), one input switch and a sensor reading
- * using serial communication.
- * 
- * The motor_supervisor_task stays gathering the information of the DHT22 sensor and motor
- * data like continuous operating time, operation time and status. It stores the values in 
- * a buffer every minute or if the motor change its state.
- * 
- * An ISR handler takes care of sending events to the queue whenever an interrupt occurs.
- * Hardware interrupts are attached to the two input pins (NC contact switch and a button)
- * 
- * Interrupts will occur if the NC switch is pressed or released, calling events
- * responsible for starting/stopping the motor and recording the running time of the motor.
- * Also a hardware interrupt will be triggered whenever the button to reset the motor is pressed
- *
- * When the running time of the motor is greater than a sp time, it turns on the LED and stops the motor
- * It changes the variable state to value 2, which means halted. (0 is stopped and 1 is running)
- * 
- * Hopefully, but not mandatory, we will be able to reset the motor online.
  *
 **/
 

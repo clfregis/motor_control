@@ -1,24 +1,22 @@
-# Motor Control using ESP32 in IDF framework
-### Codes to control a motor, get environment information and send it to a webserver (firebase). For this project I'm using ESP32 in IDF framework.
-
-______________
+# Motor Control Project
+##### Prototype that controls a motor, get environment information and send it to an online database (firebase).
 
 This project is a turnkey automation of a hopper in a industry. It consists of [hardware](hardware/) development of the board, development of the [firmware](firmware/) that manages the system, and a [web](web/) app that supervise and control the operation.
 Basically, the board is able to control motor, gather temperature and humidity information and send/receive data to/from a firebase database. How the system works is better explained in [firmware](firmware/) section.
+______________
+## 1. How to get things running
 
-## How to get things running
-
-### Hardware
+###  1.1. Hardware
 
 First it is necessary to fabricate and mount the board:
 
 1. Send GERBER files provided in [hardware](hardware/GERBER/) section to a PCB factory;
-2. Buy components listed in [BOM](hardware/README.md) files;
+2. Buy components listed in [BOM](hardware/BOM.pdf) files;
 3. Solder components in the board;
 
 P.S.: It will be also necessary to buy a 5V font (micro USB) to provide power to the board.
 
-### Web
+### 1.2. Web
 
 Concurrently with hardware fabrication we can create a firebase project. We chose firebase because of its scalability, built in functions such as authentication and hosting.
 In free plan, we have some limitations, shown [here](https://firebase.google.com/pricing?authuser=0). For MVP purposes, we will not be even closer to these limitations. If necessary, we can upgrade our plan. 
@@ -26,12 +24,12 @@ To create a project we need to have a google account, if you use Gmail, you alre
 Then, add Firebase to your web app. Follow these [instructions](https://firebase.google.com/docs/web/setup). In step 3, the HTMLs already have the SDKs. However, it is necessary to copy the snippet of our app's Firebase config object inn the first line of `/web/js/main.js`.
 After deploying the web app, we are ready!
 
-### Firmware
+### 1.3. Firmware
 
 After mounting the hardware and deploying the web app, we are ready to build and flash the program in the ESP32. 
 
 
-#### Build
+#### 1.3.1. Build
 1. [Install the Espressif IoT Development Framework](https://github.com/espressif/esp-idf) or [link](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/)
 2. Clone this repo: `git clone ...`
 3. Inside the firmware folder, configure: `make menuconfig`
@@ -58,6 +56,11 @@ Note: In step 3 You need to change some config values, for example:
 
 Save the changes and proceed to step 4.
 
+### 1.4. Future Implementations
+
++ Update the daily and continuous operating times upon booting. Useful if the systems crashes during the day, when it restarts it resets these values.
++ Every night at midnight, send the daily operating times to the server. Create a page on front end to display these values in bar graph format.
++ Implement a supervisor to reset the system if have problems with internet connection.
 
 
-Talk about current version features and future implementations
+
