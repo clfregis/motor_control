@@ -70,7 +70,8 @@ All tasks are shown in the table below.
 
 ## Future implementations
 
-
+Separate files (one for function declarations and function definitions), one for tasks, etc
+Use some sort of automatic documentation generation from comments
 
 
 

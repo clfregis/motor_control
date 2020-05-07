@@ -111,16 +111,118 @@ static xQueueHandle gpio_evt_queue = NULL;
  * @result      bufferData with a new value
 */
 static void bufferUpdate(void);
+/*!
+ * @function    update_sntp_time
+ * @abstract    Connect to SNTP server and update system time
+ * @discussion  This function connects to WiFi, then connects
+ *              to a SNTP server, update the system time
+ *              then disconnets from WiFi
+ * @result      System time synchronized
+*/
 static void update_sntp_time(void);
+/*!
+ * @function    get_last_value
+ * @abstract    Updates the last operation times for the current day
+ * @discussion  This function connects to WiFi, then connects
+ *              to a firebase server, take the last update operation
+ *              times, compare its timestamp with current time. If
+ *              the last value is from the current day, update runningTime
+                and continuousRunningTime
+ * @result      continuousRunningTime and runningTime updated
+*/
 static void get_last_value(void);
+/*!
+ * @function    update_frontEndStatus
+ * @abstract    Retrieve the Front End Status
+ * @discussion  This function connects to WiFi, then connects
+ *              to a firebase server directly on the specific
+ *              child that contains the front end status and
+ *              store its value on frontEndReset
+ * @param       motorStatusAddress      Pointer to motorAddress
+ * @result      continuousRunningTime and runningTime updated
+*/
 static void update_frontEndStatus(char *motorStatusAddress);
+/*!
+ * @function    get_sp_time
+ * @abstract    Retrieve the SP time
+ * @discussion  This function connects to WiFi, then connects
+ *              to a firebase server directly on the specific
+ *              child that contains the SP time and
+ *              store its value on spTimesec
+ * @param       motorSPAddress      Pointer to motorAddress
+ * @result      spTimesec with a new value
+*/
 static void get_sp_time(char *motorSPAddress);
+/*!
+ * @function    time_sync_notification_cb
+ * @abstract    Notification of time synchronization
+ * @discussion  For Debug purposes. Log on screen
+ *              when the time is synchronized
+ * @param       tv      Pointer to a timeval struct??
+ * @result      Logs on screen
+*/
 void time_sync_notification_cb(struct timeval *tv);
+
+static void get_sp_time(char *motorSPAddress);
+/*!
+ * @function    obtain_time
+ * @abstract    Get system time 
+ * @discussion  Update now and timeInfo variables with 
+ *              current system time
+ * @param       local_now           pointer to now
+ * @param       local_timeinfo      pointers to timeInfo
+ * @result      now and timeInfo with updated values
+*/
 static void obtain_time(time_t *local_now, struct tm *local_timeinfo); // only need this function to check if it is midnight
+/*!
+ * @function    wifi_connection_start
+ * @abstract    Configures the WiFi variables
+ * @discussion  This helper function configures Wi-Fi 
+ *              or Ethernet, as selected in menuconfig.
+ *              Read "Establishing Wi-Fi or Ethernet Connection" 
+ *              section in examples/protocols/README.md for
+ *              more information about this function.
+ * @result      Returns error if configuration fails
+*/
 static void wifi_connection_start(void);
+/*!
+ * @function    wifi_connection_begin
+ * @abstract    Connect to WiFi in previous configured SSID
+ * @discussion  This helper function configures Wi-Fi 
+ *              or Ethernet, as selected in menuconfig.
+ *              Read "Establishing Wi-Fi or Ethernet Connection" 
+ *              section in examples/protocols/README.md for
+ *              more information about this function.
+ * @result      Returns error if connection fails
+*/
 static void wifi_connection_begin(void);
+/*!
+ * @function    wifi_connection_end
+ * @abstract    Close the connection from WiFi network
+ * @discussion  This helper function configures Wi-Fi 
+ *              or Ethernet, as selected in menuconfig.
+ *              Read "Establishing Wi-Fi or Ethernet Connection" 
+ *              section in examples/protocols/README.md for
+ *              more information about this function. 
+ * @result      Returns error if it fails
+*/
 static void wifi_connection_end(void);
+/*!
+ * @function    _http_event_handler
+ * @abstract    Handles HTTP event queue    
+ * @discussion  Logs and some stuff based on HTTP event
+ * @param       evt           pointer to HTTP event 
+ * @result      Log accordingly to the content of event ID
+*/
 esp_err_t _http_event_handler(esp_http_client_event_t *evt);
+/*!
+ * @function    gpio_isr_handler
+ * @abstract    Handles hardware interrupts   
+ * @discussion  Runs every time an interrupt occurs, 
+ *              sending events to a queue
+ * @param       arg           contains the number of gpio at wich the hardware interrupt happened
+ * @result      Send events to gpio event queue
+*/
 static void IRAM_ATTR gpio_isr_handler(void* arg);
 //==========================
 // End Function definitions
