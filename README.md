@@ -43,14 +43,14 @@ After mounting the hardware and deploying the web app, we are ready to build and
 Note: In step 3 You need to change some config values, for example:
 
 * `Serial flasher config`. 
-	+ `Default serial port` type the port at wich the ESP32 is connected (e.g. COM3). 
-	+ `Default baud rate` select 921600 for a faster flashing time.
+	+ `Default serial port`: Type the port at wich the ESP32 is connected (e.g. COM3). 
+	+ `Default baud rate`: Select 921600 for a faster flashing time.
 * `Motor Configuration`. 
-	+ `Motor Value` type the firebase child at which this ESP32 will send its data (e.g. motor_2).
-	+ `Firebase address` type the firabase address without 'http://' (e.g. name_project.firebaseio.com). 
+	+ `Motor Value`: Type the firebase child at which this ESP32 will send its data (e.g. motor_2).
+	+ `Firebase address`: Type the firabase address without 'http://' (e.g. name_project.firebaseio.com). 
 	+ (Optional) Change the `SP Time in seconds` value (It can be changed later via web app).
-	+ `Timezone` select the time zone accordingly to your region.
-	+ (Optional) `Log prints for Debug`, check it only if you want to check the operation using the command prompt.
+	+ `Timezone`: Select the time zone accordingly to your region.
+	+ (Optional) `Log prints for Debug`, check it only if you want to see debug logs using the command prompt.
 * `Example Connection Configuration`
 	+ `Connect using`: Select WiFi.
 	+ `WiFi SSID`: Type the SSID of your WiFi station.
