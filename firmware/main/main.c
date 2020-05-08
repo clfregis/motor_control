@@ -78,6 +78,8 @@ static xQueueHandle gpio_evt_queue = NULL;
 	static const char *TAG_4 = "Update values";
 #endif
 
+static const char *TAG_DEBUG = "DEBUG";
+
 //==========================
 // Function definitions
 //==========================
@@ -235,12 +237,13 @@ char bufferData[60][120];	//  { "T" : 28, "H" : "78", "S" : "ON", "D" : 12314554
 								"T" : 26
 							}*/
 uint8_t bufferCounter=0;
-int size;
+//int size;
 char strftime_db[26];
-static const char *motorAddress = CONFIG_motorValue;
-static const char *firebaseAddress = CONFIG_firebaseAddress;
+char *motorAddress = CONFIG_motorValue;
+char *firebaseAddress = CONFIG_firebaseAddress;
 uint32_t spTimesec = CONFIG_SPTimesec;
 uint8_t frontEndReset = 0;
+uint8_t updateBufferCounter=0;
 
 //==========================
 // End Variable definitions
@@ -288,10 +291,21 @@ void motor_control_task(void* arg) {
                 motorStatus = 0;
             }
             if(io_num==GPIO_INPUT_IO_1 && gpio_get_level(io_num)==0 && motorStatus==2) {
-                // Reset Motor
-                gpio_set_level(GPIO_OUTPUT_IO_0, 1);
-                // Reset its state
-                motorStatus = 1;
+                // Reset Motor to its normal operation
+                if(gpio_get_level(GPIO_INPUT_IO_0)==1){
+                    // NC not pressed
+                    // Turn on the motor
+                    gpio_set_level(GPIO_OUTPUT_IO_0, 1);
+                    // Update status
+                    motorStatus = 1;
+                }
+                else if(gpio_get_level(GPIO_INPUT_IO_0)==0){
+                    // NC pressed
+                    // Turn off the motor
+                    gpio_set_level(GPIO_OUTPUT_IO_0, 0);
+                    // Update status
+                    motorStatus = 0;
+                }
                 // Turn off Alert LED
                 gpio_set_level(GPIO_OUTPUT_IO_1, 0);
                 // Reset continuous time operation
@@ -335,11 +349,23 @@ void clock_task(void *arg) {
 // Task that supervise the motor, time operation and status
 void motor_supervisor_task(void *arg) {
     DHT11_init(GPIO_DATA_0);
-    uint8_t internalCounter=0;
     uint8_t currentState=1;
     uint8_t lastState=1;
 
+    bufferUpdate();
+
 	while(1){
+
+        /*
+        * The following lines are for debuggin an error, please, remove it!
+        */
+        ESP_LOGI(TAG_DEBUG, "Motor Status: %d", motorStatus);
+        ESP_LOGI(TAG_DEBUG, "Buffer Counter: %d", bufferCounter);
+        ESP_LOGI(TAG_DEBUG, "Update Buffer Counter: %d", updateBufferCounter);
+        ESP_LOGI(TAG_DEBUG, "Current State: %d", currentState);
+        ESP_LOGI(TAG_DEBUG, "Last State: %d", lastState);
+        printf("\n");
+        // End of debugging
 
 		if (motorStatus==1){
 			// Update times
@@ -379,14 +405,16 @@ void motor_supervisor_task(void *arg) {
     	humidity = DHT11_read().humidity;
 
     	// Only store data if it is valid and if the motor changed its state
-    	if(temperature<=70 && humidity<=100 && (internalCounter>=60 || currentState!=lastState)){
-    		// Reset internalCounter
-			internalCounter=0;
+    	if(temperature<=70 && humidity<=100 && (updateBufferCounter>=59 || currentState!=lastState)){
+    		// Reset updateBufferCounter if it overflowed
+            if(updateBufferCounter>=59){
+                updateBufferCounter=0;
+            }
     		bufferUpdate();
     		lastState=currentState;
 	    }
 
-	    internalCounter++;
+	    updateBufferCounter++;
 
 		// Wait for another update
         vTaskDelay(1000/portTICK_RATE_MS);
@@ -398,8 +426,7 @@ void motor_supervisor_task(void *arg) {
 void database_task(void *pvParameters){
 
     // Wait for for the first update
-    vTaskDelay(20000/portTICK_RATE_MS);
-    bufferUpdate();
+    // vTaskDelay(20000/portTICK_RATE_MS);
 
     while(1){
     	wifi_connection_start();
@@ -428,11 +455,11 @@ void database_task(void *pvParameters){
 	        esp_http_client_set_method(client, HTTP_METHOD_POST);
 	        // client_open will open the connection, write all header strings and return ESP_OK if all went well
 	        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
-	        if (esp_http_client_open(client, size) == ESP_OK) {
+	        if (esp_http_client_open(client, strlen(bufferData[i])) == ESP_OK) {
 	        	#if CONFIG_debug
 	        		ESP_LOGI(TAG_1, "Connection opened");
 	        	#endif
-	            esp_http_client_write(client, bufferData[i], size);
+	            esp_http_client_write(client, bufferData[i], strlen(bufferData[i]));
 	            // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
 	            esp_http_client_fetch_headers(client);
 	            //ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
@@ -449,7 +476,7 @@ void database_task(void *pvParameters){
 	            //============
 	            // CONFIG_debug, but, in the future, perform a verification that the message was sent
 	            // char valor[77];
-	            // // Read the stream of data
+	            // Read the stream of data
 	            // esp_http_client_read(client, valor, 77);
 	            // printf("%s\n",valor);
 	            // CONFIG_debug
@@ -472,7 +499,9 @@ void database_task(void *pvParameters){
 
     	// Reset bufferCounter
     	bufferCounter=0;
-    	// Clean buffer? I don't think so, we overwrite old data
+        // Reset updateBufferCounter
+        updateBufferCounter=0;
+    	// Clean buffer? Don't need to, we overwrite old data
 
     	get_sp_time(motorAddress);
     	update_frontEndStatus(motorAddress);
@@ -615,7 +644,7 @@ static void bufferUpdate(void){
  	// strftime(strftime_db, sizeof(strftime_db), "%c", &timeInfo);
 	time(&now); // Does not take into consideration the time zone
 
-    size = sprintf (bufferData[bufferCounter],
+    sprintf(bufferData[bufferCounter],
     		"{ \"T\" : %d, \"H\" : %d, \"S\" : %d, \"D\" : %ld, \"DO\" : %ld, \"CO\" : %ld }",
     		temperature, humidity, motorStatus, now, runningTime, continuousRunningTime);
     bufferCounter++;
