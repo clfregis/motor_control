@@ -67,19 +67,6 @@
 #define GPIO_DATA_0             4   // DHT11 Sensor on the final code, try to use a DHT22 library
 #define ESP_INTR_FLAG_DEFAULT   0
 
-
-// Create a global variable of type xQueueHandle, which is the type we need to reference a FreeRTOS queue.
-static xQueueHandle gpio_evt_queue = NULL;
-#if CONFIG_debug
-	static const char *TAG = "LwIP SNTP";
-	static const char *TAG_1 = "HTTP Request";
-	static const char *TAG_2 = "Hour/Date";
-	static const char *TAG_3 = "Queue Creation";
-	static const char *TAG_4 = "Update values";
-#endif
-
-static const char *TAG_DEBUG = "DEBUG";
-
 //==========================
 // Function definitions
 //==========================
@@ -244,6 +231,18 @@ char *firebaseAddress = CONFIG_firebaseAddress;
 uint32_t spTimesec = CONFIG_SPTimesec;
 uint8_t frontEndReset = 0;
 uint8_t updateBufferCounter=0;
+// Create a global variable of type xQueueHandle, which is the type we need to reference a FreeRTOS queue.
+static xQueueHandle gpio_evt_queue = NULL;
+#if CONFIG_debug
+    static const char *TAG = "LwIP SNTP";
+    static const char *TAG_1 = "HTTP Request";
+    static const char *TAG_2 = "Hour/Date";
+    static const char *TAG_3 = "Queue Creation";
+    static const char *TAG_4 = "Update values";
+    static const char *TAG_DEBUG = "DEBUG";
+    // For CONFIG_debug, to show in terminal the update time
+    char strftime_buf[64];
+#endif
 
 //==========================
 // End Variable definitions
@@ -356,16 +355,17 @@ void motor_supervisor_task(void *arg) {
 
 	while(1){
 
-        /*
-        * The following lines are for debuggin an error, please, remove it!
-        */
-        ESP_LOGI(TAG_DEBUG, "Motor Status: %d", motorStatus);
-        ESP_LOGI(TAG_DEBUG, "Buffer Counter: %d", bufferCounter);
-        ESP_LOGI(TAG_DEBUG, "Update Buffer Counter: %d", updateBufferCounter);
-        ESP_LOGI(TAG_DEBUG, "Current State: %d", currentState);
-        ESP_LOGI(TAG_DEBUG, "Last State: %d", lastState);
-        printf("\n");
-        // End of debugging
+        #if CONFIG_debug
+            ESP_LOGI(TAG_DEBUG, "Motor Status: %d", motorStatus);
+            ESP_LOGI(TAG_DEBUG, "Buffer Counter: %d", bufferCounter);
+            ESP_LOGI(TAG_DEBUG, "Update Buffer Counter: %d", updateBufferCounter);
+            ESP_LOGI(TAG_DEBUG, "Current State: %d", currentState);
+            ESP_LOGI(TAG_DEBUG, "Last State: %d", lastState);
+            ESP_LOGI(TAG_DEBUG, "Free Heap Size: %d", esp_get_free_heap_size());
+            ESP_LOGI(TAG_DEBUG, "Minimum Heap Size: %d", esp_get_minimum_free_heap_size());
+            printf("\n");
+        #endif
+        
 
 		if (motorStatus==1){
 			// Update times
@@ -424,9 +424,6 @@ void motor_supervisor_task(void *arg) {
 
 // for inside a while to update the buffer
 void database_task(void *pvParameters){
-
-    // Wait for for the first update
-    // vTaskDelay(20000/portTICK_RATE_MS);
 
     while(1){
     	wifi_connection_start();
@@ -697,6 +694,7 @@ static void get_sp_time(char *motorSPAddress){
     // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_initPK24esp_http_client_config_t
     esp_http_client_handle_t client = esp_http_client_init(&config);
 
+
     // client_open will open the connection, write all header strings and return ESP_OK if all went well
     // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
     if (esp_http_client_open(client, 0) == ESP_OK) {
@@ -738,6 +736,7 @@ static void get_sp_time(char *motorSPAddress){
         //============
 
         esp_http_client_close(client);
+        esp_http_client_cleanup(client);
     }
     else {
     	#if CONFIG_debug
@@ -791,7 +790,6 @@ static void update_frontEndStatus(char *motorStatusAddress){
 	        char valor[esp_http_client_get_content_length(client)];
 	        // Read the stream of data
 	        esp_http_client_read(client, valor, esp_http_client_get_content_length(client));
-
 	        cJSON *root = cJSON_Parse(valor);
 	        frontEndReset = cJSON_GetObjectItem(root,motorStatusAddress)->valueint;
 	        cJSON_Delete(root);
@@ -805,6 +803,7 @@ static void update_frontEndStatus(char *motorStatusAddress){
 	        //============
 
 	        esp_http_client_close(client);
+            esp_http_client_cleanup(client);
 	    }
 	    else {
 	    	#if CONFIG_debug
@@ -853,10 +852,6 @@ void time_sync_notification_cb(struct timeval *tv) {
 }
 
 static void obtain_time(time_t *local_now, struct tm *local_timeinfo){
-    #if CONFIG_debug
-    	// For CONFIG_debug, to show in terminal the update time
-		char strftime_buf[64];
-	#endif
 
     // Store in `now` the UNIX timestamp
     time(local_now);
