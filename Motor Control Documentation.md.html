@@ -2,7 +2,7 @@
 <h1 class="code-line" data-line-start=0 data-line-end=1><a id="Motor_Control_Project_0"></a>Motor Control Project</h1>
 <h5 class="code-line" data-line-start=1 data-line-end=2><a id="Prototype_that_controls_a_motor_get_environment_information_and_send_it_to_an_online_database_firebase_1"></a>Prototype that controls a motor, get environment information and send it to an online database (firebase).</h5>
 <p class="has-line-data" data-line-start="3" data-line-end="5">This project is a turnkey automation of a hopper in a industry. It consists of <a href="hardware/">hardware</a> development of the board, development of the <a href="firmware/">firmware</a> that manages the system, and a <a href="web/">web</a> app that supervise and control the operation.<br>
-Basically, the board is able to control motor, gather temperature and humidity information and send/receive data to/from a firebase database. How the system works is better explained in <a href="firmware/">firmware</a> section.</p>
+Basically, the board is able to control the motor, gather temperature and humidity information and send/receive data to/from a firebase database. How the system works is better explained in <a href="firmware/">firmware</a> section.</p>
 <hr>
 <h2 class="code-line" data-line-start=6 data-line-end=7><a id="1_How_to_get_things_running_6"></a>1. How to get things running</h2>
 <h3 class="code-line" data-line-start=8 data-line-end=9><a id="11_Hardware_8"></a>1.1. Hardware</h3>
@@ -12,12 +12,12 @@ Basically, the board is able to control motor, gather temperature and humidity i
 <li class="has-line-data" data-line-start="13" data-line-end="14">Buy components listed in <a href="hardware/BOM.pdf">BOM</a> files;</li>
 <li class="has-line-data" data-line-start="14" data-line-end="16">Solder components in the board;</li>
 </ol>
-<p class="has-line-data" data-line-start="16" data-line-end="17">P.S.: It will be also necessary to buy a 5V font (micro USB) to provide power to the board.</p>
+<p class="has-line-data" data-line-start="16" data-line-end="17">P.S.: It will be also necessary to buy a 5V power adapter (micro USB) to provide power to the board.</p>
 <h3 class="code-line" data-line-start=18 data-line-end=19><a id="12_Web_18"></a>1.2. Web</h3>
-<p class="has-line-data" data-line-start="20" data-line-end="25">Concurrently with hardware fabrication we can create a firebase project. We chose firebase because of its scalability, built in functions such as authentication and hosting.<br>
-In free plan, we have some limitations, shown <a href="https://firebase.google.com/pricing?authuser=0">here</a>. For MVP purposes, we will not be even closer to these limitations. If necessary, we can upgrade our plan.<br>
+<p class="has-line-data" data-line-start="20" data-line-end="25">Concurrently with hardware fabrication we can create a firebase project. We chose firebase because of its scalability and the built-in functions such as authentication and hosting.<br>
+There are some limitations in free plan, as shown <a href="https://firebase.google.com/pricing?authuser=0">here</a>. For MVP purposes, we will not be even closer to those limitations, but we can upgrade our plan if necessary.<br>
 To create a project we need to have a google account, if you use Gmail, you already have one. Then access this <a href="https://console.firebase.google.com/?pli=1">page</a> and login. Create a <code>Realtime Database</code>. The Google documentation is pretty awesome, so just follows the steps in the tutorials.<br>
-Then, add Firebase to your web app. Follow these <a href="https://firebase.google.com/docs/web/setup">instructions</a>. In step 3, the HTMLs already have the SDKs. However, it is necessary to copy the snippet of our app’s Firebase config object inn the first line of <code>/web/js/main.js</code>.<br>
+Then, add Firebase to your web app following these <a href="https://firebase.google.com/docs/web/setup">instructions</a>. <strong>Attention!</strong> In step 3, the HTMLs already have the SDKs. However, it is necessary to copy the snippet of our app’s Firebase config object in the first line of <code>/web/js/main.js</code>.<br>
 After deploying the web app, we are ready!</p>
 <h3 class="code-line" data-line-start=26 data-line-end=27><a id="13_Firmware_26"></a>1.3. Firmware</h3>
 <p class="has-line-data" data-line-start="28" data-line-end="29">After mounting the hardware and deploying the web app, we are ready to build and flash the program in the ESP32.</p>
@@ -30,13 +30,13 @@ After deploying the web app, we are ready!</p>
 <li class="has-line-data" data-line-start="36" data-line-end="38">Flash: <code>make flash</code></li>
 </ol>
 <ul>
-<li class="has-line-data" data-line-start="38" data-line-end="40">Build &amp; flash FAT image: <code>make flashfatfs</code></li>
+<li class="has-line-data" data-line-start="38" data-line-end="40">Build &amp; flash &amp; monitor: <code>make flash monitor</code></li>
 </ul>
-<p class="has-line-data" data-line-start="40" data-line-end="41">Note: In step 3 You need to change some config values, for example:</p>
+<p class="has-line-data" data-line-start="40" data-line-end="41">Note: In step 3 you need to change some config values, for example:</p>
 <ul>
 <li class="has-line-data" data-line-start="42" data-line-end="45"><code>Serial flasher config</code>.
 <ul>
-<li class="has-line-data" data-line-start="43" data-line-end="44"><code>Default serial port</code>: Type the port at wich the ESP32 is connected (e.g. COM3).</li>
+<li class="has-line-data" data-line-start="43" data-line-end="44"><code>Default serial port</code>: Type the port at which the ESP32 is connected (e.g. COM3).</li>
 <li class="has-line-data" data-line-start="44" data-line-end="45"><code>Default baud rate</code>: Select 921600 for a faster flashing time.</li>
 </ul>
 </li>
@@ -60,9 +60,9 @@ After deploying the web app, we are ready!</p>
 <p class="has-line-data" data-line-start="56" data-line-end="57">Save the changes and proceed to step 4.</p>
 <h3 class="code-line" data-line-start=58 data-line-end=59><a id="14_Future_Implementations_58"></a>1.4. Future Implementations</h3>
 <ul>
-<li class="has-line-data" data-line-start="60" data-line-end="61">Update the daily and continuous operating times upon booting. Useful if the systems crashes during the day, when it restarts it resets these values.</li>
-<li class="has-line-data" data-line-start="61" data-line-end="62">Every night at midnight, send the daily operating times to the server. Create a page on front end to display these values in bar graph format.</li>
-<li class="has-line-data" data-line-start="62" data-line-end="64">Implement a supervisor to reset the system if have problems with internet connection.</li>
+<li class="has-line-data" data-line-start="60" data-line-end="61">Update the daily and continuous operating times upon booting. Useful if the systems crashes during the day, because when it restarts it resets these values.</li>
+<li class="has-line-data" data-line-start="61" data-line-end="62">Every night at midnight, send the daily operating times to the server. Create a page on web app to display these values in bar graph format.</li>
+<li class="has-line-data" data-line-start="62" data-line-end="64">Implement a supervisor to reset the system if have problems with WiFi connection.</li>
 </ul>
 <hr>
 <h1 class="code-line" data-line-start=66 data-line-end=67><a id="2_Hardware_66"></a>2. Hardware</h1>
@@ -119,15 +119,15 @@ After deploying the web app, we are ready!</p>
 </tr>
 <tr>
 <td>Mechanical Bot Mirrored.pdf</td>
-<td>Mechanical designed with sizes and holes distances.</td>
+<td>Mechanical designes with sizes and holes distances.</td>
 </tr>
 <tr>
 <td>Mechanical Bot.pdf</td>
-<td>Mechanical designed with sizes and holes distances.</td>
+<td>Mechanical designes with sizes and holes distances.</td>
 </tr>
 <tr>
 <td>Mechanical Top.pdf</td>
-<td>Mechanical designed with sizes and holes distances.</td>
+<td>Mechanical designes with sizes and holes distances.</td>
 </tr>
 </tbody>
 </table>
@@ -507,14 +507,14 @@ All tasks are shown in the table below.</p>
 <tr>
 <td>motor_control_task</td>
 <td>4</td>
-<td>Controls the motor operation, based on the stateof NC switch, motor status and reset button</td>
+<td>Controls the motor operation, based on the state of NC switch, motor status and reset button</td>
 <td>motorStatus, continuousRunningTime and frontEndReset</td>
 <td>motorStatus</td>
 </tr>
 <tr>
 <td>clock_task</td>
 <td>3</td>
-<td>Correct the drift time daily around midnight andreset the operation times</td>
+<td>Correct the drift time daily around midnight and reset the operation times</td>
 <td>runningTime, continuousRunningTime,now and timeInfo</td>
 <td></td>
 </tr>
@@ -577,7 +577,7 @@ All tasks are shown in the table below.</p>
 </tr>
 <tr>
 <td>time_sync_notification_cb</td>
-<td>For Debug purposes. Log on screen when the time is syncrhonized</td>
+<td>For Debug purposes. Log on screen when the time is synchronized</td>
 <td>*tv struct ??</td>
 <td>Log on screen</td>
 </tr>
@@ -627,7 +627,7 @@ All tasks are shown in the table below.</p>
 </ul>
 <hr>
 <h1 class="code-line" data-line-start=293 data-line-end=294><a id="Creator_293"></a>Creator</h1>
-<p class="has-line-data" data-line-start="295" data-line-end="296">Project created and revised by Electrical Engineer Claudio Fernando Regis Sobrinho. If you face any issues or have questions about this project, please send me an <a href="/cdn-cgi/l/email-protection#2f4c4349015d4a48465c6f48424e4643014c4042">e-mail</a>.</p>
+<p class="has-line-data" data-line-start="295" data-line-end="296">Project created and revised by Electrical Engineer Claudio Fernando Regis Sobrinho. If you face any issues or have questions about this project, please send me an <a href="/cdn-cgi/l/email-protection#b6d5dad098c4d3d1dfc5f6d1dbd7dfda98d5d9db">e-mail</a>.</p>
 <table class="table table-striped table-bordered">
 <thead>
 <tr>
@@ -642,6 +642,12 @@ All tasks are shown in the table below.</p>
 <td>1</td>
 <td>07/05/2020</td>
 <td>Small modifications on <a href="http://Readme.md">Readme.md</a> files</td>
+<td>Claudio Regis</td>
+</tr>
+<tr>
+<td>2</td>
+<td>08/05/2020</td>
+<td>Small corrections</td>
 <td>Claudio Regis</td>
 </tr>
 </tbody>

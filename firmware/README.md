@@ -58,7 +58,7 @@ All tasks are shown in the table below.
 |get_last_value|It takes the last operation times for the current day|void|continuousRunningTime and runningTime updated|
 |update_frontEndStatus|Connect to a child on firebase<br>accordingly to the motorAddress and<br>retrieve its status|motorStatusAddress pointer to motorAddress|frontEndStatus with a new value|
 |get_sp_time|Connect to a child on firebase<br>accordingly to the motorAddress and<br>retrieve the SP time if it changed<br>since last reading|motorSPAddress pointer to motorAddress|spTimesec with a new value|
-|time_sync_notification_cb|For Debug purposes. Log on screen<br>when the time is syncrhonized|*tv struct ??|Log on screen|
+|time_sync_notification_cb|For Debug purposes. Log on screen<br>when the time is synchronized|*tv struct ??|Log on screen|
 |obtain_time|Update now and timeInfo variables with current system time|local_now and local_timeinfo pointers to now and timeInfo variables|now and timeInfo with updated values|
 |wifi_connection_start|Configures the WiFi variables|void|Returns error if configuration fails|
 |wifi_connection_begin|Connect to WiFi in previous configured SSID|void|Returns error if connection fails|

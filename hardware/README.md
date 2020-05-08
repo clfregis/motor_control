@@ -21,9 +21,9 @@ The `hardware` folder has all necessary files to produce and mount the hardware 
 |GERBER.zip                 |Output files to produce the PCB in the factory. The industries accept .zip files.|
 |General_Schematic.pdf      |File that shows how the components are connected to each other in the board.     |
 |Layers.Cam                 |Mechanical positioning and sizes of all layers in the board in CAM format.       |
-|Mechanical Bot Mirrored.pdf|Mechanical designed with sizes and holes distances.                              |
-|Mechanical Bot.pdf         |Mechanical designed with sizes and holes distances.                              |
-|Mechanical Top.pdf         |Mechanical designed with sizes and holes distances.                              |	
+|Mechanical Bot Mirrored.pdf|Mechanical designes with sizes and holes distances.                              |
+|Mechanical Bot.pdf         |Mechanical designes with sizes and holes distances.                              |
+|Mechanical Top.pdf         |Mechanical designes with sizes and holes distances.                              |	
 
 For this specific project we do not have any special part, no SMD nor difficult components to find and use. We have two options when mounting this board, one is to solder the ESP32 Development Board directly to PCB, other is use female headers. The latter is better because it will be possible to remove the board easily if you want to.
 It is important to be aware of what model of ESP 32 Development board to use. This project was designed to be compatible with [DoIT ESP32 DevKit V1](https://docs.platformio.org/en/latest/boards/espressif32/esp32doit-devkit-v1.html) with 30 pins (some development boards have more pins). The pinout is shown below:
