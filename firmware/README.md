@@ -24,15 +24,15 @@ The variables, its type and its purpose are organized in the table below:
 | runningTime           | time_t            | Store the operation time of the motor since midnight                              |
 | continuousRunningTime | time_t            | Store the continuous operating time of the motor since the last time it was off   |
 | now                   | time_t            | Store the current time of the system every time it is called by time() function   |
-| timeInfo              | struct tm         | Actually it is a struct not a variable, it stores the time in a very detailed<br> way by localtime() function, taking into consideration timezone |
+| timeInfo              | struct tm         | Actually it is a struct not a variable, it stores the time in a very detailed way by localtime() function, taking into consideration timezone |
 | url[65]               | char              | Store the firebase url to do the HTTP requests                                    |
 | bufferData[60][120]   | char              | Store the Data that will be sent to the database, up to 60 different POST request |
 | bufferCounter         | uint8_t           | Counter used to do a loop when sending data to database                           |
 | size                  | int               | Stores the buffer size to correctly open the connection with the server           | 
 | strftime_db[26]       | char              | For debug only, store a string with time in a human readable format               |
-| *motorAddress         | static const char | Stores the value of the motor to create the url on connection with the<br>database. It is defined when programming the board on `menuconfig`, thus we pass<br>`CONFIG_motorValue` to it |
-| *firebaseAddress      | static const char | Stores the address of the firebase to create the url on connection with the<br>database. It is defined when programming on `menuconfig`, thus we pass<br>`CONFIG_firebaseAddress` to it |
-| spTimesec             | uint32_t          | Stores the SP time of the motor. It can be changed by front end or when <br>programming, thus we pass `CONFIG_SPTimesec` to it when programmin the board. |
+| *motorAddress         | static const char | Stores the value of the motor to create the url on connection with thedatabase. It is defined when programming the board on `menuconfig`, thus we pass`CONFIG_motorValue` to it |
+| *firebaseAddress      | static const char | Stores the address of the firebase to create the url on connection with thedatabase. It is defined when programming on `menuconfig`, thus we pass`CONFIG_firebaseAddress` to it |
+| spTimesec             | uint32_t          | Stores the SP time of the motor. It can be changed by front end or when programming, thus we pass `CONFIG_SPTimesec` to it when programmin the board. |
 | frontEndReset         | uint8_t           | Used to reset the motor by front end                                              |
  
 
@@ -43,22 +43,22 @@ All tasks are shown in the table below.
 
 | Task name             | Priority |Function   | Writes to  | Reads from |
 |-----------------------|----------|-----------|------------|------------|
-| motor_control_task | 4 | Controls the motor operation, based on the state<br>of NC switch, motor status and reset button|motorStatus, continuousRunningTime and frontEndReset|motorStatus|
-| clock_task | 3 | Correct the drift time daily around midnight and<br>reset the operation times|runningTime, continuousRunningTime,<br>now and timeInfo|            |
-| motor_supervisor_task | 2 | Every other second reads temperature and humidity, updates the operation times and update the buffer|runningTime, continuousRunningTime,<br>motorStatus, frontEndReset, bufferData<br>size and bufferCounter |motorStatus and frontEndReset |
-| database_task | 1 | Every other minute sends the buffer data to database,<br>read SP time modifications in front end and update front end status|url|size, bufferData, spTime and frontEndReset|
+| motor_control_task | 4 | Controls the motor operation, based on the state of NC switch, motor status and reset button|motorStatus, continuousRunningTime and frontEndReset|motorStatus|
+| clock_task | 3 | Correct the drift time daily around midnight and reset the operation times|runningTime, continuousRunningTime,now and timeInfo|            |
+| motor_supervisor_task | 2 | Every other second reads temperature and humidity, updates the operation times and update the buffer|runningTime, continuousRunningTime, motorStatus, frontEndReset, bufferData size and bufferCounter |motorStatus and frontEndReset |
+| database_task | 1 | Every other minute sends the buffer data to database, read SP time modifications in front end and update front end status|url|size, bufferData, spTime and frontEndReset|
 
 
 ## Functions
 
 |Function Name|Discussion|Parameters|Result|
 |-------------|----------|----------|------|
-|bufferUpdate|Take the values of tempertature,<br>humidity, now, runningTime, motorStatus and<br>continuousRunningTime and fetch to buffer|void|bufferData with a new value|
+|bufferUpdate|Take the values of tempertature, humidity, now, runningTime, motorStatus and continuousRunningTime and fetch to buffer|void|bufferData with a new value|
 |update_sntp_time|Connect to SNTP server and update system time|void|System time synchronized with UTC time|
 |get_last_value|It takes the last operation times for the current day|void|continuousRunningTime and runningTime updated|
-|update_frontEndStatus|Connect to a child on firebase<br>accordingly to the motorAddress and<br>retrieve its status|motorStatusAddress pointer to motorAddress|frontEndStatus with a new value|
-|get_sp_time|Connect to a child on firebase<br>accordingly to the motorAddress and<br>retrieve the SP time if it changed<br>since last reading|motorSPAddress pointer to motorAddress|spTimesec with a new value|
-|time_sync_notification_cb|For Debug purposes. Log on screen<br>when the time is synchronized|*tv struct ??|Log on screen|
+|update_frontEndStatus|Connect to a child on firebase accordingly to the motorAddress and retrieve its status|motorStatusAddress pointer to motorAddress|frontEndStatus with a new value|
+|get_sp_time|Connect to a child on firebase accordingly to the motorAddress and retrieve the SP time if it changed since last reading|motorSPAddress pointer to motorAddress|spTimesec with a new value|
+|time_sync_notification_cb|For Debug purposes. Log on screen when the time is synchronized|*tv struct ??|Log on screen|
 |obtain_time|Update now and timeInfo variables with current system time|local_now and local_timeinfo pointers to now and timeInfo variables|now and timeInfo with updated values|
 |wifi_connection_start|Configures the WiFi variables|void|Returns error if configuration fails|
 |wifi_connection_begin|Connect to WiFi in previous configured SSID|void|Returns error if connection fails|
