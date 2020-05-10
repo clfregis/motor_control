@@ -131,7 +131,6 @@ static void get_sp_time(char *motorSPAddress);
 */
 void time_sync_notification_cb(struct timeval *tv);
 
-static void get_sp_time(char *motorSPAddress);
 /*!
  * @function    obtain_time
  * @abstract    Get system time 
@@ -192,6 +191,14 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt);
  * @result      Send events to gpio event queue
 */
 static void IRAM_ATTR gpio_isr_handler(void* arg);
+/*!
+ * @function    update_daily
+ * @abstract    Sends data to database  
+ * @discussion  Runs at midnight to update the daily operation time
+ * @param       motorDailyAddress      Pointer to motorAddress
+ * @result      database with updated daily operation information
+*/
+static void update_daily(char *motorDailyAddress);
 //==========================
 // End Function definitions
 //==========================
@@ -231,6 +238,7 @@ char *firebaseAddress = CONFIG_firebaseAddress;
 uint32_t spTimesec = CONFIG_SPTimesec;
 uint8_t frontEndReset = 0;
 uint8_t updateBufferCounter=0;
+bool updateDailyFlag = false;
 // Create a global variable of type xQueueHandle, which is the type we need to reference a FreeRTOS queue.
 static xQueueHandle gpio_evt_queue = NULL;
 #if CONFIG_debug
@@ -329,14 +337,13 @@ void clock_task(void *arg) {
         if (timeInfo.tm_hour==0 && timeInfo.tm_min>=0 && timeInfo.tm_min<=30){
             if (!flagClock){
                 flagClock=true;
+                updateDailyFlag = true;
                 #if CONFIG_debug
                     ESP_LOGI(TAG, "Correct the drift, daily");
                 #endif
                 update_sntp_time();
                 time(&now);
-                // Update running time to the server
-                runningTime=0;
-                continuousRunningTime=0;
+               
             }
         }
         else {
@@ -361,6 +368,7 @@ void motor_supervisor_task(void *arg) {
             ESP_LOGI(TAG_DEBUG, "Update Buffer Counter: %d", updateBufferCounter);
             ESP_LOGI(TAG_DEBUG, "Current State: %d", currentState);
             ESP_LOGI(TAG_DEBUG, "Last State: %d", lastState);
+            ESP_LOGI(TAG_DEBUG, "update Flag: %d", updateDailyFlag);
             ESP_LOGI(TAG_DEBUG, "Free Heap Size: %d", esp_get_free_heap_size());
             ESP_LOGI(TAG_DEBUG, "Minimum Heap Size: %d", esp_get_minimum_free_heap_size());
             printf("\n");
@@ -480,6 +488,7 @@ void database_task(void *pvParameters){
 	            //============
 
 	            esp_http_client_close(client);
+                esp_http_client_cleanup(client);
 	        }
 	        else {
 	        	#if CONFIG_debug
@@ -490,8 +499,6 @@ void database_task(void *pvParameters){
 	        // End of POST request
 	        // ======================================
 
-	        esp_http_client_cleanup(client);
-	        vTaskDelay(10/portTICK_RATE_MS);
     	}
 
     	// Reset bufferCounter
@@ -502,6 +509,10 @@ void database_task(void *pvParameters){
 
     	get_sp_time(motorAddress);
     	update_frontEndStatus(motorAddress);
+    	if (updateDailyFlag){
+    		update_daily(motorAddress);
+    		updateDailyFlag=false;
+    	}
 
     	wifi_connection_end();
         // Wait for another update: 1 minute
@@ -660,19 +671,99 @@ static void get_last_value(void){
     // If so update runningTime variable
     // Else, set it to zero
 
+    // Currrently, we are not able to execute
+    // the above algorithm, because the structure 
+    // of the database.
+
     // ======================================
     // End of GET request
     // ======================================
 
-	// Connect to firebase, gg
+}
+
+static void update_daily(char *motorDailyAddress){
+
+	#if CONFIG_debug
+		ESP_LOGI(TAG_4, "Updating daily information");
+	#endif
+
+	// ======================================
+    // Start POST request
+    // ======================================
+
+	time(&now); // Does not take into consideration the time zone
+
+	char dailyData[40];
+
+    sprintf(dailyData,"{ \"D\" : %ld, \"DO\" : %ld }", now, runningTime);
+    // Create url
+	sprintf(url, "https://%s/daily/%s.json",firebaseAddress, motorDailyAddress);
+
+	// Struct which contains the HTTP configuration
+    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv424esp_http_client_config_t
+    esp_http_client_config_t config = {
+    .url = url,
+    .event_handler = _http_event_handler,
+    };
+
+    // Call the client init passing the config struct to start a HTTP session
+    // It returns a esp_http_client_handle_t that you must use as input to other functions in the interface
+    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_initPK24esp_http_client_config_t
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+
+    esp_http_client_set_method(client, HTTP_METHOD_POST);
+    // client_open will open the connection, write all header strings and return ESP_OK if all went well
+    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv420esp_http_client_open24esp_http_client_handle_ti
+    if (esp_http_client_open(client, strlen(dailyData)) == ESP_OK) {
+    	#if CONFIG_debug
+    		ESP_LOGI(TAG_1, "Connection opened");
+    	#endif
+        esp_http_client_write(client, dailyData, strlen(dailyData));
+        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_client.html#_CPPv429esp_http_client_fetch_headers24esp_http_client_handle_t
+        esp_http_client_fetch_headers(client);
+        //ESP_LOGI(TAG_1, "HTTP POST Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
+        if (esp_http_client_get_status_code(client)==200){
+        	#if CONFIG_debug
+            	ESP_LOGI(TAG_1, "Message successfuly sent!");
+            #endif
+        }
+        else {
+        	#if CONFIG_debug
+        	   	ESP_LOGI(TAG_1, "Sending message failed!");
+        	#endif
+        }
+        //============
+        // CONFIG_debug, but, in the future, perform a verification that the message was sent
+        // char valor[77];
+        // Read the stream of data
+        // esp_http_client_read(client, valor, 77);
+        // printf("%s\n",valor);
+        // CONFIG_debug
+        //============
+
+        esp_http_client_close(client);
+        esp_http_client_cleanup(client);
+    
+        runningTime=0;
+        continuousRunningTime=0;
+    }
+    else {
+    	#if CONFIG_debug
+    	    ESP_LOGE(TAG_1, "Connection failed");
+    	#endif
+    }
+    // ======================================
+    // End of POST request
+    // ======================================
 
 }
+
 static void get_sp_time(char *motorSPAddress){
 	uint32_t lastReading=spTimesec;
 	uint32_t currentReading;
 
 	#if CONFIG_debug
-		ESP_LOGI(TAG_4, "Initializing Update");
+		ESP_LOGI(TAG_4, "Check for change in SP time");
 	#endif
 
 	// ======================================
