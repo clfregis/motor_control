@@ -231,7 +231,6 @@ char bufferData[60][120];	//  { "T" : 28, "H" : "78", "S" : "ON", "D" : 12314554
 								"T" : 26
 							}*/
 uint8_t bufferCounter=0;
-//int size;
 char strftime_db[26];
 char *motorAddress = CONFIG_motorValue;
 char *firebaseAddress = CONFIG_firebaseAddress;

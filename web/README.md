@@ -63,6 +63,13 @@ For Firebase hosting, please refer to its [documentation](https://firebase.googl
 			motor_2 : 750,
 			motor_3 : 800,
 			motor_4 : 300
+		},
+		daily: {
+			motor_1 : {
+			- M61_vCVgkNTwwjbF5MB : {
+				D: 1588107627,
+				DO: 60
+			},
 		}
 
 
@@ -92,6 +99,7 @@ The `sp_time` child have the information of SP time operation of each motor. Fro
 
 The `front_end_reset_status` child is used by the Front End to reset the motor via the front end in case it is halted.
 
+The `daily` child is used to store the information of the daily operation time of a day. Front end use this data to create a bar graph that is updated daily between 23:30 and 23:59 by the back end.
 
 
 

@@ -28,12 +28,14 @@ The variables, its type and its purpose are organized in the table below:
 | url[65]               | char              | Store the firebase url to do the HTTP requests                                    |
 | bufferData[60][120]   | char              | Store the Data that will be sent to the database, up to 60 different POST request |
 | bufferCounter         | uint8_t           | Counter used to do a loop when sending data to database                           |
-| size                  | int               | Stores the buffer size to correctly open the connection with the server           | 
 | strftime_db[26]       | char              | For debug only, store a string with time in a human readable format               |
 | *motorAddress         | static const char | Stores the value of the motor to create the url on connection with thedatabase. It is defined when programming the board on `menuconfig`, thus we pass`CONFIG_motorValue` to it |
 | *firebaseAddress      | static const char | Stores the address of the firebase to create the url on connection with thedatabase. It is defined when programming on `menuconfig`, thus we pass`CONFIG_firebaseAddress` to it |
 | spTimesec             | uint32_t          | Stores the SP time of the motor. It can be changed by front end or when programming, thus we pass `CONFIG_SPTimesec` to it when programmin the board. |
 | frontEndReset         | uint8_t           | Used to reset the motor by front end                                              |
+| updateBufferCounter | uint8_t | Used to count a defined number of seconds until the next update of the buffer |
+| updateDailyFlag | bool | Used to check if the daily updating was already executed |
+| gpio_evt_queue | xQueueHandle | Used to create a queue to handle GPIO events |
  
 
 ## Tasks
@@ -46,7 +48,7 @@ All tasks are shown in the table below.
 | motor_control_task | 4 | Controls the motor operation, based on the state of NC switch, motor status and reset button|motorStatus, continuousRunningTime and frontEndReset|motorStatus|
 | clock_task | 3 | Correct the drift time daily around midnight and reset the operation times|runningTime, continuousRunningTime,now and timeInfo|            |
 | motor_supervisor_task | 2 | Every other second reads temperature and humidity, updates the operation times and update the buffer|runningTime, continuousRunningTime, motorStatus, frontEndReset, bufferData size and bufferCounter |motorStatus and frontEndReset |
-| database_task | 1 | Every other minute sends the buffer data to database, read SP time modifications in front end and update front end status|url|size, bufferData, spTime and frontEndReset|
+| database_task | 1 | Every other minute sends the buffer data to database, read SP time modifications in front end, update front end status and update daily status|url|size, bufferData, spTime and frontEndReset|
 
 
 ## Functions
@@ -65,6 +67,7 @@ All tasks are shown in the table below.
 |wifi_connection_end|Close the connection from WiFi network|void|Returns error if it fails|
 |gpio_isr_handler|Runs every time an interrupt occurs, sending events to a queue|arg contains the number of gpio at wich the hardware interrupt happened|Send events to gpio event queue|
 |http_event_handler|Handles HTTP event queue|evt pointer to HTTP event|Log accordingly to the content of event ID|
+| update_daily | Sends data to database | motorDailyAddress      Pointer to motorAddress| Database with updated daily operation information| 
 
 
 ## Future implementations
