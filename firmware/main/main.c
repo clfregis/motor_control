@@ -333,8 +333,8 @@ void clock_task(void *arg) {
 
         obtain_time(&now, &timeInfo);
 
-        // Correct the drift every night between midnight and half past midnight
-        if (timeInfo.tm_hour==0 && timeInfo.tm_min>=0 && timeInfo.tm_min<=30){
+        // Correct the drift every night
+        if (timeInfo.tm_hour==23 && timeInfo.tm_min>=30 && timeInfo.tm_min<=59){
             if (!flagClock){
                 flagClock=true;
                 updateDailyFlag = true;
@@ -357,8 +357,6 @@ void motor_supervisor_task(void *arg) {
     DHT11_init(GPIO_DATA_0);
     uint8_t currentState=1;
     uint8_t lastState=1;
-
-    bufferUpdate();
 
 	while(1){
 
@@ -432,6 +430,11 @@ void motor_supervisor_task(void *arg) {
 
 // for inside a while to update the buffer
 void database_task(void *pvParameters){
+
+    // Wait for the first reading
+    if(updateBufferCounter==0){
+        vTaskDelay(250/portTICK_RATE_MS);
+    }
 
     while(1){
     	wifi_connection_start();
