@@ -1,14 +1,4 @@
 // Paste below the Firebase config object
-var firebaseConfig = {
-  apiKey: "AIzaSyA-fPrOStfPGq-Ze_wW3mloB-Qo2AhgU8c",
-  authDomain: "esp32-66ba5.firebaseapp.com",
-  databaseURL: "https://esp32-66ba5.firebaseio.com",
-  projectId: "esp32-66ba5",
-  storageBucket: "esp32-66ba5.appspot.com",
-  messagingSenderId: "502036978763",
-  appId: "1:502036978763:web:5691be205391772c2a01ce",
-  measurementId: "G-85ZFMD2ZK8"
-};
 
 var temp = [], hum = [], time = [], state = [], daily = [], continuous = [], timeDaily = [];
 var status, current_motor;
