@@ -1,7 +1,16 @@
 // Paste below the Firebase config object
+var firebaseConfig = {
+  apiKey: "AIzaSyA-fPrOStfPGq-Ze_wW3mloB-Qo2AhgU8c",
+  authDomain: "esp32-66ba5.firebaseapp.com",
+  databaseURL: "https://esp32-66ba5.firebaseio.com",
+  projectId: "esp32-66ba5",
+  storageBucket: "esp32-66ba5.appspot.com",
+  messagingSenderId: "502036978763",
+  appId: "1:502036978763:web:5691be205391772c2a01ce",
+  measurementId: "G-85ZFMD2ZK8"
+};
 
-
-var temp = [], hum = [], time = [], state = [], daily = [], continuous = [];
+var temp = [], hum = [], time = [], state = [], daily = [], continuous = [], timeDaily = [];
 var status, current_motor;
 const currentMotor = {
   'motor_1' : 'Motor 1',
@@ -89,6 +98,25 @@ window.addEventListener('load', () => {
     document.getElementById("currentSP").innerHTML = "Current SP time: " + currentSPTime + " s";
   });
 
+  // Update the bar graph the current motor
+  var databaseBar = firebase.database().ref('daily/'+motor_label);
+  databaseBar.once('value', function(snapshot){
+    let snapBar = snapshot.val();
+    let dailyOperationTime = [];
+    for (i in snapBar){
+      for (n in snapBar[i]){
+        if (n=='D'){
+          timeDaily.push(snapBar[i][n]*1000); //Multiply by thousand, because Zingchart works with ms, instead of sec
+        }
+        if (n=='DO'){
+          dailyOperationTime.push(snapBar[i][n]);
+        }
+      }
+    }
+    drawBarGraph(timeDaily, dailyOperationTime, 'Daily Operation Time [sec]', 'dailyStatusChart','#E79399', 1000, 'Daily Operation Time: %v s');
+    
+  });
+
   // Store the value typed on input
   var letSPTime = document.getElementById('SPTime');
   // Set this value on the database upon clicking
@@ -126,15 +154,6 @@ window.addEventListener('load', () => {
   }
 
   getDataFromServer(updateFrontEndStatus);
-  // if (current_state==2){
-  //   databaseStatus.set(2);
-  // }
-  // else if (current_state==1){
-  //   databaseStatus.set(1);
-  // }
-  // else if (current_state==0){
-  //   databaseStatus.set(0);
-  // }
   
 });
 
@@ -467,6 +486,117 @@ function drawGraphStatus(local_xValues, local_yValues, local_yLabel, local_ID,
 
 }
 
+function drawBarGraph(local_xValues, local_yValues, local_yLabel, local_ID, local_graphColor, yMaxValue, local_tooltipText) {
+  const chartConfig = {
+    type: 'bar',
+    globals: {
+      backgroundColor: 'transparent',
+      fontFamily: 'Helvetica Neue',
+      fontColor: '#BBC1CB',
+    },
+    plotarea: {
+      marginTop: 10,
+      marginLeft: 70,
+      marginRight: 60,
+      marginBottom: 120,
+    },
+    scaleY: {
+      maxValue: yMaxValue,
+      minValue: 0,
+      // step: 1,
+      tick: {
+        lineColor: '#676E7A',
+        lineStyle: 'solid',
+        lineWidth: '1px',
+        visible: true,
+      },
+      guide: {
+        lineColor: '#676E7A',
+        lineStyle: 'solid',
+        lineWidth: '1px',
+        visible: true,
+        rules: [{
+          rule: "%i == 0",
+          visible: false
+        }]
+      },
+      item: {
+        fontSize: 14,
+      },
+      label: {
+        text: local_yLabel,
+        bold: false,
+        fontSize: 18,
+      },
+      zooming:false
+    },
+
+    scaleX: {
+      labels: local_xValues,
+      step: "day",
+      transform: {
+        type: 'date',
+        all: '%D, %dd %M %Y<br>%H:%i:%s',
+      },
+      guide: {
+        lineColor: '#676E7A',
+        lineStyle: 'solid',
+        lineWidth: '1px',
+        visible: true,
+        rules: [{
+          rule: "%i == 0",
+          visible: false
+        }]
+      },
+      item: {
+        fontSize: 14,
+      },
+      zooming: true,
+      zoomTo: [local_xValues.length-30,local_xValues.length],
+    },
+    tooltip: {
+      backgroundColor: '#484F5D',
+      color: '#C6BD74',
+      fontSize: 14,
+      text: local_tooltipText,
+    },
+    zoom:{
+      backgroundColor: '#C6BD74',
+      borderColor: '#BBC1CB',
+      borderWidth: 1,
+    },
+
+    preview: {
+      mask:{
+        backgroundColor: 'white',
+      },
+      handle: {
+        height: 30,
+        backgroundColor: 'white',
+      },
+      label: {
+        visible: false,
+      },
+      live: true,
+      
+    },
+    noData: {
+      text: 'No data found',
+      backgroundColor: 'transparent'
+    },
+    series: [
+          { 
+            values: local_yValues,
+            backgroundColor: local_graphColor, /* hexadecimal or RGB value */
+          }
+        ]
+  };
+  zingchart.render({
+    id: local_ID,
+    data: chartConfig
+  });
+
+}
 
 
 // /**
@@ -623,3 +753,39 @@ $('#datepicker_status').datepicker({
 
     zoomToIndex(minmin, maxmax, 'statusChart');
   });
+
+  $('#datepicker_dailyStatus').datepicker({ 
+    dateFormat: 'dd/mm/yy',
+    showOtherMonths: true,
+    showOtherMonths: true }).on("change", function() {
+      // Get date from input form
+      var datePicker = document.getElementById("datepicker_dailyStatus").value;
+      // Structure date
+      var structuredDatePicker = [datePicker.substr(0,2),datePicker.substr(3,2),datePicker.substr(6,4)];
+      // Create a date variable
+      var d = new Date(structuredDatePicker[2],structuredDatePicker[1]-1,structuredDatePicker[0]);
+      // Transform its value to UNIX timestamp, if Brazil, GMT-3, subtracts 3*3600*1000
+      // Turns out that it is not necessary to subtract the value since when returning to front end
+      // in zoom function, it does the timezone again
+      var transformedDate = Date.parse(d)/*-10800000*/;
+      var minmin = function() {
+        for (var i=0; i<timeDaily.length;i++){
+          if (timeDaily[i]>=transformedDate){
+            return i;
+          }
+        }
+      }();
+  
+      var maxmax = function() {
+        for (var i=0; i<timeDaily.length;i++){
+          if (timeDaily[i]>=(transformedDate+(3*24*3600*1000))){
+            return i;
+          }
+        }
+      }();
+
+      console.log(minmin);
+      console.log(maxmax);
+  
+      zoomToIndex(minmin, maxmax, 'dailyStatusChart');
+    });
