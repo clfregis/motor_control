@@ -31,17 +31,20 @@ After mounting the hardware and deploying the web app, we are ready to build and
 
 #### 1.3.1. Build
 1. [Install the Espressif IoT Development Framework](https://github.com/espressif/esp-idf) or [link](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/)
-2. Clone this repo: `git clone ...`
-3. Inside the firmware folder, configure: `make menuconfig`
-4. Build: `make all`
-5. Flash: `make flash`
+2. Make sure that the USB to UART driver of the development board is installed. In our case, the board uses [CP2102](https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers)
+3. Clone this repo: `git clone ...`
+4. Inside the firmware folder, configure: `make menuconfig`
+5. Build: `make all`
+6. Flash: `make flash`
 
 * Build & flash & monitor: `make flash monitor`
+
+P.S.: If you get an error like: **"make" is not recognized as a internal or external command**. Try to use `idf.py` instead of `make` command.
 
 Note: In step 3 you need to change some config values, for example:
 
 * `Serial flasher config`. 
-	+ `Default serial port`: Type the port at which the ESP32 is connected (e.g. COM3). 
+	+ `Default serial port`: Type the port at which the ESP32 is connected (e.g. COM3). If this option does not appear, just ignore it, the port will be automatically detected. 
 	+ `Default baud rate`: Select 921600 for a faster flashing time.
 * `Motor Configuration`. 
 	+ `Motor Value`: Type the firebase child at which this ESP32 will send its data (e.g. motor_2).

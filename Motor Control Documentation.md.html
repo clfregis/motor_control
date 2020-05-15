@@ -16,7 +16,7 @@ Basically, the board is able to control the motor, gather temperature and humidi
 <h3 class="code-line" data-line-start=18 data-line-end=19><a id="12_Web_18"></a>1.2. Web</h3>
 <p class="has-line-data" data-line-start="20" data-line-end="25">Concurrently with hardware fabrication we can create a firebase project. We chose firebase because of its scalability and the built-in functions such as authentication and hosting.<br>
 There are some limitations in free plan, as shown <a href="https://firebase.google.com/pricing?authuser=0">here</a>. For MVP purposes, we will not be even closer to those limitations, but we can upgrade our plan if necessary.<br>
-To create a project we need to have a google account, if you use Gmail, you already have one. Then access this <a href="https://console.firebase.google.com/?pli=1">page</a> and login. Create a <code>Realtime Database</code>. The Google documentation is pretty awesome, so just follows the steps in the tutorials.<br>
+To create a project we need to have a google account, if you use Gmail, you already have one. Then access this <a href="https://console.firebase.google.com/?pli=1">page</a>, log in and create a <code>Realtime Database</code> (ust follows the steps in the tutorials, Google documentation is pretty awesome).<br>
 Then, add Firebase to your web app following these <a href="https://firebase.google.com/docs/web/setup">instructions</a>. <strong>Attention!</strong> In step 3, the HTMLs already have the SDKs. However, it is necessary to copy the snippet of our app’s Firebase config object in the first line of <code>/web/js/main.js</code>.<br>
 After deploying the web app, we are ready!</p>
 <h3 class="code-line" data-line-start=26 data-line-end=27><a id="13_Firmware_26"></a>1.3. Firmware</h3>
@@ -24,51 +24,53 @@ After deploying the web app, we are ready!</p>
 <h4 class="code-line" data-line-start=31 data-line-end=32><a id="131_Build_31"></a>1.3.1. Build</h4>
 <ol>
 <li class="has-line-data" data-line-start="32" data-line-end="33"><a href="https://github.com/espressif/esp-idf">Install the Espressif IoT Development Framework</a> or <a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/">link</a></li>
-<li class="has-line-data" data-line-start="33" data-line-end="34">Clone this repo: <code>git clone ...</code></li>
-<li class="has-line-data" data-line-start="34" data-line-end="35">Inside the firmware folder, configure: <code>make menuconfig</code></li>
-<li class="has-line-data" data-line-start="35" data-line-end="36">Build: <code>make all</code></li>
-<li class="has-line-data" data-line-start="36" data-line-end="38">Flash: <code>make flash</code></li>
+<li class="has-line-data" data-line-start="33" data-line-end="34">Make sure that the USB to UART driver of the development board is installed. In our case, the board uses <a href="https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers">CP2102</a></li>
+<li class="has-line-data" data-line-start="34" data-line-end="35">Clone this repo: <code>git clone ...</code></li>
+<li class="has-line-data" data-line-start="35" data-line-end="36">Inside the firmware folder, configure: <code>make menuconfig</code></li>
+<li class="has-line-data" data-line-start="36" data-line-end="37">Build: <code>make all</code></li>
+<li class="has-line-data" data-line-start="37" data-line-end="39">Flash: <code>make flash</code></li>
 </ol>
 <ul>
-<li class="has-line-data" data-line-start="38" data-line-end="40">Build &amp; flash &amp; monitor: <code>make flash monitor</code></li>
+<li class="has-line-data" data-line-start="39" data-line-end="41">Build &amp; flash &amp; monitor: <code>make flash monitor</code></li>
 </ul>
-<p class="has-line-data" data-line-start="40" data-line-end="41">Note: In step 3 you need to change some config values, for example:</p>
+<p class="has-line-data" data-line-start="41" data-line-end="42">P.S.: If you get an error like: <strong>“make” is not recognized as a internal or external command</strong>. Try to use <code>idf.py</code> instead of <code>make</code> command.</p>
+<p class="has-line-data" data-line-start="43" data-line-end="44">Note: In step 3 you need to change some config values, for example:</p>
 <ul>
-<li class="has-line-data" data-line-start="42" data-line-end="45"><code>Serial flasher config</code>.
+<li class="has-line-data" data-line-start="45" data-line-end="48"><code>Serial flasher config</code>.
 <ul>
-<li class="has-line-data" data-line-start="43" data-line-end="44"><code>Default serial port</code>: Type the port at which the ESP32 is connected (e.g. COM3).</li>
-<li class="has-line-data" data-line-start="44" data-line-end="45"><code>Default baud rate</code>: Select 921600 for a faster flashing time.</li>
-</ul>
-</li>
-<li class="has-line-data" data-line-start="45" data-line-end="51"><code>Motor Configuration</code>.
-<ul>
-<li class="has-line-data" data-line-start="46" data-line-end="47"><code>Motor Value</code>: Type the firebase child at which this ESP32 will send its data (e.g. motor_2).</li>
-<li class="has-line-data" data-line-start="47" data-line-end="48"><code>Firebase address</code>: Type the firabase address without ‘http://’ (e.g. name_project.firebaseio.com).</li>
-<li class="has-line-data" data-line-start="48" data-line-end="49">(Optional) Change the <code>SP Time in seconds</code> value (It can be changed later via web app).</li>
-<li class="has-line-data" data-line-start="49" data-line-end="50"><code>Timezone</code>: Select the time zone accordingly to your region.</li>
-<li class="has-line-data" data-line-start="50" data-line-end="51">(Optional) <code>Log prints for Debug</code>, check it only if you want to see debug logs using the command prompt.</li>
+<li class="has-line-data" data-line-start="46" data-line-end="47"><code>Default serial port</code>: Type the port at which the ESP32 is connected (e.g. COM3). If this option does not appear, just ignore it, the port will be automatically detected.</li>
+<li class="has-line-data" data-line-start="47" data-line-end="48"><code>Default baud rate</code>: Select 921600 for a faster flashing time.</li>
 </ul>
 </li>
-<li class="has-line-data" data-line-start="51" data-line-end="56"><code>Example Connection Configuration</code>
+<li class="has-line-data" data-line-start="48" data-line-end="54"><code>Motor Configuration</code>.
 <ul>
-<li class="has-line-data" data-line-start="52" data-line-end="53"><code>Connect using</code>: Select WiFi.</li>
-<li class="has-line-data" data-line-start="53" data-line-end="54"><code>WiFi SSID</code>: Type the SSID of your WiFi station.</li>
-<li class="has-line-data" data-line-start="54" data-line-end="56"><code>WiFi Password</code>: Type the password of your WiFi station.</li>
+<li class="has-line-data" data-line-start="49" data-line-end="50"><code>Motor Value</code>: Type the firebase child at which this ESP32 will send its data (e.g. motor_2).</li>
+<li class="has-line-data" data-line-start="50" data-line-end="51"><code>Firebase address</code>: Type the firabase address without ‘http://’ (e.g. name_project.firebaseio.com).</li>
+<li class="has-line-data" data-line-start="51" data-line-end="52">(Optional) Change the <code>SP Time in seconds</code> value (It can be changed later via web app).</li>
+<li class="has-line-data" data-line-start="52" data-line-end="53"><code>Timezone</code>: Select the time zone accordingly to your region.</li>
+<li class="has-line-data" data-line-start="53" data-line-end="54">(Optional) <code>Log prints for Debug</code>, check it only if you want to see debug logs using the command prompt.</li>
+</ul>
+</li>
+<li class="has-line-data" data-line-start="54" data-line-end="59"><code>Example Connection Configuration</code>
+<ul>
+<li class="has-line-data" data-line-start="55" data-line-end="56"><code>Connect using</code>: Select WiFi.</li>
+<li class="has-line-data" data-line-start="56" data-line-end="57"><code>WiFi SSID</code>: Type the SSID of your WiFi station.</li>
+<li class="has-line-data" data-line-start="57" data-line-end="59"><code>WiFi Password</code>: Type the password of your WiFi station.</li>
 </ul>
 </li>
 </ul>
-<p class="has-line-data" data-line-start="56" data-line-end="57">Save the changes and proceed to step 4.</p>
-<h3 class="code-line" data-line-start=58 data-line-end=59><a id="14_Future_Implementations_58"></a>1.4. Future Implementations</h3>
+<p class="has-line-data" data-line-start="59" data-line-end="60">Save the changes and proceed to step 4.</p>
+<h3 class="code-line" data-line-start=61 data-line-end=62><a id="14_Future_Implementations_61"></a>1.4. Future Implementations</h3>
 <ul>
-<li class="has-line-data" data-line-start="60" data-line-end="61">Update the daily and continuous operating times upon booting. Useful if the systems crashes during the day, because when it restarts it resets these values.</li>
-<li class="has-line-data" data-line-start="61" data-line-end="62">Every night at midnight, send the daily operating times to the server. Create a page on web app to display these values in bar graph format.</li>
-<li class="has-line-data" data-line-start="62" data-line-end="64">Implement a supervisor to reset the system if have problems with WiFi connection.</li>
+<li class="has-line-data" data-line-start="63" data-line-end="64">Update the daily and continuous operating times upon booting. Useful if the systems crashes during the day, because when it restarts it resets these values.</li>
+<li class="has-line-data" data-line-start="64" data-line-end="65">Every night at midnight, send the daily operating times to the server. Create a page on web app to display these values in bar graph format.</li>
+<li class="has-line-data" data-line-start="65" data-line-end="66">Implement a supervisor to reset the system if have problems with WiFi connection.</li>
 </ul>
 <hr>
-<h1 class="code-line" data-line-start=66 data-line-end=67><a id="2_Hardware_66"></a>2. Hardware</h1>
-<h2 class="code-line" data-line-start=68 data-line-end=69><a id="21_3D_Model_of_the_board_when_mounted_68"></a>2.1. 3D Model of the board when mounted</h2>
-<p class="has-line-data" data-line-start="70" data-line-end="71"><img src="hardware/3DModel.png" alt="3D Model"></p>
-<p class="has-line-data" data-line-start="73" data-line-end="74">The <code>hardware</code> folder has all necessary files to produce and mount the hardware part of the project as can be seen on the table below.</p>
+<h1 class="code-line" data-line-start=73 data-line-end=74><a id="2_Hardware_73"></a>2. Hardware</h1>
+<h2 class="code-line" data-line-start=75 data-line-end=76><a id="21_3D_Model_of_the_board_when_mounted_75"></a>2.1. 3D Model of the board when mounted</h2>
+<p class="has-line-data" data-line-start="77" data-line-end="78"><img src="hardware/3DModel.png" alt="3D Model"></p>
+<p class="has-line-data" data-line-start="80" data-line-end="81">The <code>hardware</code> folder has all necessary files to produce and mount the hardware part of the project as can be seen on the table below.</p>
 <table class="table table-striped table-bordered">
 <thead>
 <tr>
@@ -131,10 +133,10 @@ After deploying the web app, we are ready!</p>
 </tr>
 </tbody>
 </table>
-<p class="has-line-data" data-line-start="91" data-line-end="94">For this specific project we do not have any special part, no SMD nor difficult components to find and use. We have two options when mounting this board, one is to solder the ESP32 Development Board directly to PCB, other is use female headers. The latter is better because it will be possible to remove the board easily if you want to.<br>
+<p class="has-line-data" data-line-start="98" data-line-end="101">For this specific project we do not have any special part, no SMD nor difficult components to find and use. We have two options when mounting this board, one is to solder the ESP32 Development Board directly to PCB, other is use female headers. The latter is better because it will be possible to remove the board easily if you want to.<br>
 It is important to be aware of what model of ESP 32 Development board to use. This project was designed to be compatible with <a href="https://docs.platformio.org/en/latest/boards/espressif32/esp32doit-devkit-v1.html">DoIT ESP32 DevKit V1</a> with 30 pins (some development boards have more pins). The pinout is shown below:<br>
 <img src="hardware/ESP32-pinout-mapping.png" alt="DoIT ESP32 DevKit V1"></p>
-<h2 class="code-line" data-line-start=96 data-line-end=97><a id="22_BOM_96"></a>2.2. BOM</h2>
+<h2 class="code-line" data-line-start=103 data-line-end=104><a id="22_BOM_103"></a>2.2. BOM</h2>
 <table class="table table-striped table-bordered">
 <thead>
 <tr>
@@ -267,18 +269,18 @@ It is important to be aware of what model of ESP 32 Development board to use. Th
 </tr>
 </tbody>
 </table>
-<h2 class="code-line" data-line-start=114 data-line-end=115><a id="23_Future_Implementations_114"></a>2.3. Future Implementations</h2>
+<h2 class="code-line" data-line-start=121 data-line-end=122><a id="23_Future_Implementations_121"></a>2.3. Future Implementations</h2>
 <ul>
-<li class="has-line-data" data-line-start="116" data-line-end="117">Add <a href="https://forum.mysensors.org/topic/3096/open-hardware-licensing">licensing</a>.</li>
-<li class="has-line-data" data-line-start="117" data-line-end="118">Change PTH to SMD components to reduce size.</li>
-<li class="has-line-data" data-line-start="118" data-line-end="119">Add LEDs to show operation processes (blink fast when looking for internet connection, blink slow when is working properly, etc).</li>
-<li class="has-line-data" data-line-start="119" data-line-end="121">Instead of using DoIT ESP32 DevKit V1 board, put the ESP32 microcontroller directly into PCB.</li>
+<li class="has-line-data" data-line-start="123" data-line-end="124">Add <a href="https://forum.mysensors.org/topic/3096/open-hardware-licensing">licensing</a>.</li>
+<li class="has-line-data" data-line-start="124" data-line-end="125">Change PTH to SMD components to reduce size.</li>
+<li class="has-line-data" data-line-start="125" data-line-end="126">Add LEDs to show operation processes (blink fast when looking for internet connection, blink slow when is working properly, etc).</li>
+<li class="has-line-data" data-line-start="126" data-line-end="128">Instead of using DoIT ESP32 DevKit V1 board, put the ESP32 microcontroller directly into PCB.</li>
 </ul>
 <hr>
-<h1 class="code-line" data-line-start=124 data-line-end=125><a id="3_Web_124"></a>3. Web</h1>
-<p class="has-line-data" data-line-start="126" data-line-end="127">The <code>web</code> folder is basically the front end. It consists of the web interface, which request and send data to the firebase server.</p>
-<h2 class="code-line" data-line-start=128 data-line-end=129><a id="31_HTML_128"></a>3.1. HTML</h2>
-<p class="has-line-data" data-line-start="130" data-line-end="131">The structure of HTML files is:</p>
+<h1 class="code-line" data-line-start=131 data-line-end=132><a id="3_Web_131"></a>3. Web</h1>
+<p class="has-line-data" data-line-start="133" data-line-end="134">The <code>web</code> folder is basically the front end. It consists of the web interface, which request and send data to the firebase server.</p>
+<h2 class="code-line" data-line-start=135 data-line-end=136><a id="31_HTML_135"></a>3.1. HTML</h2>
+<p class="has-line-data" data-line-start="137" data-line-end="138">The structure of HTML files is:</p>
 <pre><code>|-index.html
 |---motor_1.html
 |---motor_2.html
@@ -287,22 +289,22 @@ It is important to be aware of what model of ESP 32 Development board to use. Th
 |-404.html (Generated by firebase)
 </code></pre>
 <ul>
-<li class="has-line-data" data-line-start="139" data-line-end="140"><code>index.html</code> contains the intro page of the web app, which is a lateral bar and two cards. The first card contains links to open the motors pages. The second card will contain the input form to register new motors.</li>
-<li class="has-line-data" data-line-start="140" data-line-end="141"><code>404.html</code> contains the error page</li>
-<li class="has-line-data" data-line-start="141" data-line-end="143"><code>motor_X.html</code> are pages that show the graphs of each motor (temperature, humidity and operating) with respect to time. It is possible to zoom in the graphs using the mouse cursor or by choosing an especific date on the datepicker form. There are also cards that contain (almost) realtime information of the motor, such as its current state, temperature, daily operating times, etc. In this cards, it is possible to reset halted motors and change the SP time.</li>
+<li class="has-line-data" data-line-start="146" data-line-end="147"><code>index.html</code> contains the intro page of the web app, which is a lateral bar and two cards. The first card contains links to open the motors pages. The second card will contain the input form to register new motors.</li>
+<li class="has-line-data" data-line-start="147" data-line-end="148"><code>404.html</code> contains the error page</li>
+<li class="has-line-data" data-line-start="148" data-line-end="150"><code>motor_X.html</code> are pages that show the graphs of each motor (temperature, humidity and operating) with respect to time. It is possible to zoom in the graphs using the mouse cursor or by choosing an especific date on the datepicker form. There are also cards that contain (almost) realtime information of the motor, such as its current state, temperature, daily operating times, etc. In this cards, it is possible to reset halted motors and change the SP time.</li>
 </ul>
-<h2 class="code-line" data-line-start=143 data-line-end=144><a id="32_CSS_143"></a>3.2. CSS</h2>
-<p class="has-line-data" data-line-start="145" data-line-end="146">The structure of CSS files is:</p>
+<h2 class="code-line" data-line-start=150 data-line-end=151><a id="32_CSS_150"></a>3.2. CSS</h2>
+<p class="has-line-data" data-line-start="152" data-line-end="153">The structure of CSS files is:</p>
 <pre><code>|-all.css
 |-dashboard.css
 |-jquery-ui.css
 |-reset.css
 </code></pre>
-<p class="has-line-data" data-line-start="152" data-line-end="153">These files have all the styling definitions of every classes and objects inside the HTML files. The jquery-ui.css is special, it contains information specifically of the datepicker.</p>
-<h2 class="code-line" data-line-start=154 data-line-end=155><a id="33_JS_154"></a>3.3. JS</h2>
-<p class="has-line-data" data-line-start="156" data-line-end="157">There are only one JS file, the <code>main.js</code>, which contains the interface to the firebase database and other stuff such as loading animations, functions to draw <a href="https://www.zingchart.com/download">zing charts</a> and do <a href="https://www.zingchart.com/gallery/line-chart-with-zoom-buttons">automatic zoom</a>, functions to work with UNIX timestamp, etc. Please refer to <a href="https://firebase.google.com/docs/reference/js?authuser=0">firebase documentation</a> to understand some of the functions used there. To use zing charts, please also check its <a href="https://www.zingchart.com/docs/api/json-configuration">documentation</a></p>
-<h2 class="code-line" data-line-start=158 data-line-end=159><a id="34_Firebase_158"></a>3.4. Firebase</h2>
-<p class="has-line-data" data-line-start="160" data-line-end="161">For Firebase hosting, please refer to its <a href="https://firebase.google.com/docs/hosting/?authuser=0#implementation_path">documentation</a>. With respect to the database, we have pretty much the following structure:</p>
+<p class="has-line-data" data-line-start="159" data-line-end="160">These files have all the styling definitions of every classes and objects inside the HTML files. The jquery-ui.css is special, it contains information specifically of the datepicker.</p>
+<h2 class="code-line" data-line-start=161 data-line-end=162><a id="33_JS_161"></a>3.3. JS</h2>
+<p class="has-line-data" data-line-start="163" data-line-end="164">There are only one JS file, the <code>main.js</code>, which contains the interface to the firebase database and other stuff such as loading animations, functions to draw <a href="https://www.zingchart.com/download">zing charts</a> and do <a href="https://www.zingchart.com/gallery/line-chart-with-zoom-buttons">automatic zoom</a>, functions to work with UNIX timestamp, etc. Please refer to <a href="https://firebase.google.com/docs/reference/js?authuser=0">firebase documentation</a> to understand some of the functions used there. To use zing charts, please also check its <a href="https://www.zingchart.com/docs/api/json-configuration">documentation</a></p>
+<h2 class="code-line" data-line-start=165 data-line-end=166><a id="34_Firebase_165"></a>3.4. Firebase</h2>
+<p class="has-line-data" data-line-start="167" data-line-end="168">For Firebase hosting, please refer to its <a href="https://firebase.google.com/docs/hosting/?authuser=0#implementation_path">documentation</a>. With respect to the database, we have pretty much the following structure:</p>
 <pre><code>root {
     motor_1: {
         - M61_vCVgkNTwwjbF5MB : {
@@ -338,7 +340,7 @@ It is important to be aware of what model of ESP 32 Development board to use. Th
         },
     }
 </code></pre>
-<p class="has-line-data" data-line-start="198" data-line-end="199">The <code>motor_X</code> childs receive informations from motors every minute. Back End writes to this child and Front End only reads. the format is the following:</p>
+<p class="has-line-data" data-line-start="205" data-line-end="206">The <code>motor_X</code> childs receive informations from motors every minute. Back End writes to this child and Front End only reads. the format is the following:</p>
 <pre><code>- M61_vCVgkNTwwjbF5MB : {
             CO: 60,
             D: 1588107627,
@@ -348,7 +350,7 @@ It is important to be aware of what model of ESP 32 Development board to use. Th
             T: 31
         },
 </code></pre>
-<p class="has-line-data" data-line-start="209" data-line-end="210"><code>- M61_vCVgkNTwwjbF5MB</code> is a timestamp key automatically created by firebase. It occurs because we are doing POST requests with this information. Each minute, up to 60 of this blocks are updated to the database by the motors, where:</p>
+<p class="has-line-data" data-line-start="216" data-line-end="217"><code>- M61_vCVgkNTwwjbF5MB</code> is a timestamp key automatically created by firebase. It occurs because we are doing POST requests with this information. Each minute, up to 60 of this blocks are updated to the database by the motors, where:</p>
 <table class="table table-striped table-bordered">
 <thead>
 <tr>
@@ -390,22 +392,22 @@ It is important to be aware of what model of ESP 32 Development board to use. Th
 </tr>
 </tbody>
 </table>
-<p class="has-line-data" data-line-start="220" data-line-end="221">The <code>sp_time</code> child have the information of SP time operation of each motor. Front End writes to this child and Back End only reads (every minute).</p>
-<p class="has-line-data" data-line-start="222" data-line-end="223">The <code>front_end_reset_status</code> child is used by the Front End to reset the motor via the front end in case it is halted.</p>
-<p class="has-line-data" data-line-start="224" data-line-end="225">The <code>daily</code> child is used to store the information of the daily operation time of a day. Front end use this data to create a bar graph that is updated daily between 23:30 and 23:59 by the back end.</p>
+<p class="has-line-data" data-line-start="227" data-line-end="228">The <code>sp_time</code> child have the information of SP time operation of each motor. Front End writes to this child and Back End only reads (every minute).</p>
+<p class="has-line-data" data-line-start="229" data-line-end="230">The <code>front_end_reset_status</code> child is used by the Front End to reset the motor via the front end in case it is halted.</p>
+<p class="has-line-data" data-line-start="231" data-line-end="232">The <code>daily</code> child is used to store the information of the daily operation time of a day. Front end use this data to create a bar graph that is updated daily between 23:30 and 23:59 by the back end.</p>
 <hr>
-<h1 class="code-line" data-line-start=228 data-line-end=229><a id="4_Firmware_228"></a>4. Firmware</h1>
-<p class="has-line-data" data-line-start="230" data-line-end="235">Well, depending on the project, the firmware development can be the most time consuming and complex task to do.<br>
+<h1 class="code-line" data-line-start=235 data-line-end=236><a id="4_Firmware_235"></a>4. Firmware</h1>
+<p class="has-line-data" data-line-start="237" data-line-end="242">Well, depending on the project, the firmware development can be the most time consuming and complex task to do.<br>
 For this project, we used free RTOS mostly because it was necessary to deliver a robust application. Dealing with real motors, safety is a big concern.<br>
 For the microcontroller, we used ESP32, a very very powerful device (Arduinos are ancient technology compared to it). I will not get into too much detail regarding the specifications of the device. In general it has WiFi and Bluetooth connections, it is dual core, have some flash memory (used to store the SSID and Password of WiFi Networks) and can be easily programmed to work in Low Power.<br>
 Our application consists of a motor control of a hopper, based on the state of a NC switch. Basically, when the switch is not pressed (digital Low) the motor is running and when the switch is pressed (digital High) the motor stops. The system is also capable of retrieve the temperature and humidity of the environment using a DHT22 sensor. On top of that, we count the operation time of the motor. The operation time, temperature and humidity are stored internally and every minute it is sent to a database (we used firebase from Google).<br>
 We use the information of operation time for two things:</p>
 <ol>
-<li class="has-line-data" data-line-start="236" data-line-end="237">Stop the motor if it stays running for a long period of time (named SP time). Basically, when the motor runs for a long period of time, it means that the line breaks and material is being spilled outside the hopper.</li>
-<li class="has-line-data" data-line-start="237" data-line-end="239">Record the daily operation of the motor to cross check the material used daily.</li>
+<li class="has-line-data" data-line-start="243" data-line-end="244">Stop the motor if it stays running for a long period of time (named SP time). Basically, when the motor runs for a long period of time, it means that the line breaks and material is being spilled outside the hopper.</li>
+<li class="has-line-data" data-line-start="244" data-line-end="246">Record the daily operation of the motor to cross check the material used daily.</li>
 </ol>
-<h2 class="code-line" data-line-start=239 data-line-end=240><a id="41_Global_Variables_239"></a>4.1. Global Variables</h2>
-<p class="has-line-data" data-line-start="241" data-line-end="243">The global variables as in an ordinary code can be manipulated by all functions and all tasks. It is not good practice to use global variables in free RTOS, unless you really know what you are doing. The risk of a task change the value of a variable in the middle of execution of other task that also manipulates this same variable is high. We can use semaphores, queues and other things to maintain our code safe, however, in our case, there is only one task that ever writes to the variable (although many can read from it), then a global variable should not cause a problem.<br>
+<h2 class="code-line" data-line-start=246 data-line-end=247><a id="41_Global_Variables_246"></a>4.1. Global Variables</h2>
+<p class="has-line-data" data-line-start="248" data-line-end="250">The global variables as in an ordinary code can be manipulated by all functions and all tasks. It is not good practice to use global variables in free RTOS, unless you really know what you are doing. The risk of a task change the value of a variable in the middle of execution of other task that also manipulates this same variable is high. We can use semaphores, queues and other things to maintain our code safe, however, in our case, there is only one task that ever writes to the variable (although many can read from it), then a global variable should not cause a problem.<br>
 The variables, its type and its purpose are organized in the table below:</p>
 <table class="table table-striped table-bordered">
 <thead>
@@ -508,8 +510,8 @@ The variables, its type and its purpose are organized in the table below:</p>
 </tr>
 </tbody>
 </table>
-<h2 class="code-line" data-line-start=266 data-line-end=267><a id="42_Tasks_266"></a>4.2. Tasks</h2>
-<p class="has-line-data" data-line-start="268" data-line-end="270">In free RTOS, we have tasks, which we can think of as pieces of codes that can run concurrently. The definition of a task is much more complex and I recommend to read the Kolban’s book on ESP32 where he explains in details the architecture of a task. One thing to keep in mind is that tasks have priorities (the higher the number, higher is its priority), thus, let’s say we have two tasks: A (priority 2) and B (priority 3). If A is running and B is ready to run, the task A will stop and then the task B will run. When B finishes, the task A will resume from where it stopped.<br>
+<h2 class="code-line" data-line-start=273 data-line-end=274><a id="42_Tasks_273"></a>4.2. Tasks</h2>
+<p class="has-line-data" data-line-start="275" data-line-end="277">In free RTOS, we have tasks, which we can think of as pieces of codes that can run concurrently. The definition of a task is much more complex and I recommend to read the Kolban’s book on ESP32 where he explains in details the architecture of a task. One thing to keep in mind is that tasks have priorities (the higher the number, higher is its priority), thus, let’s say we have two tasks: A (priority 2) and B (priority 3). If A is running and B is ready to run, the task A will stop and then the task B will run. When B finishes, the task A will resume from where it stopped.<br>
 All tasks are shown in the table below.</p>
 <table class="table table-striped table-bordered">
 <thead>
@@ -552,7 +554,7 @@ All tasks are shown in the table below.</p>
 </tr>
 </tbody>
 </table>
-<h2 class="code-line" data-line-start=279 data-line-end=280><a id="43_Functions_279"></a>4.3. Functions</h2>
+<h2 class="code-line" data-line-start=286 data-line-end=287><a id="43_Functions_286"></a>4.3. Functions</h2>
 <table class="table table-striped table-bordered">
 <thead>
 <tr>
@@ -643,15 +645,15 @@ All tasks are shown in the table below.</p>
 </tr>
 </tbody>
 </table>
-<h2 class="code-line" data-line-start=298 data-line-end=299><a id="44_Future_implementations_298"></a>4.4. Future implementations</h2>
+<h2 class="code-line" data-line-start=305 data-line-end=306><a id="44_Future_implementations_305"></a>4.4. Future implementations</h2>
 <ul>
-<li class="has-line-data" data-line-start="300" data-line-end="301">Separate files (one for function declarations and function definitions), one for tasks, etc.</li>
-<li class="has-line-data" data-line-start="301" data-line-end="302">Change temperature and humidity from uint_8 to float variables to have more precision.</li>
-<li class="has-line-data" data-line-start="302" data-line-end="304">Use some sort of automatic documentation generation from comments.</li>
+<li class="has-line-data" data-line-start="307" data-line-end="308">Separate files (one for function declarations and function definitions), one for tasks, etc.</li>
+<li class="has-line-data" data-line-start="308" data-line-end="309">Change temperature and humidity from uint_8 to float variables to have more precision.</li>
+<li class="has-line-data" data-line-start="309" data-line-end="311">Use some sort of automatic documentation generation from comments.</li>
 </ul>
 <hr>
-<h1 class="code-line" data-line-start=305 data-line-end=306><a id="Creator_305"></a>Creator</h1>
-<p class="has-line-data" data-line-start="307" data-line-end="308">Project created and revised by Electrical Engineer Claudio Fernando Regis Sobrinho. If you face any issues or have questions about this project, please send me an <a href="/cdn-cgi/l/email-protection#cdaea1abe3bfa8aaa4be8daaa0aca4a1e3aea2a0">e-mail</a>.</p>
+<h1 class="code-line" data-line-start=312 data-line-end=313><a id="Creator_312"></a>Creator</h1>
+<p class="has-line-data" data-line-start="314" data-line-end="315">Project created and revised by Electrical Engineer Claudio Fernando Regis Sobrinho. If you face any issues or have questions about this project, please send me an <a href="/cdn-cgi/l/email-protection#c7a4aba1e9b5a2a0aeb487a0aaa6aeabe9a4a8aa">e-mail</a>.</p>
 <table class="table table-striped table-bordered">
 <thead>
 <tr>
@@ -678,6 +680,12 @@ All tasks are shown in the table below.</p>
 <td>3</td>
 <td>11/05/2020</td>
 <td>Inserted the V1.1 implementations</td>
+<td>Claudio Regis</td>
+</tr>
+<tr>
+<td>4</td>
+<td>15/05/2020</td>
+<td>Modified the file structure</td>
 <td>Claudio Regis</td>
 </tr>
 </tbody>
