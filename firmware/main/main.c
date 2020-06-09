@@ -436,8 +436,6 @@ void database_task(void *pvParameters){
     }
 
     while(1){
-    	wifi_connection_start();
-
     	// bufferCounter is always 1 ahead of the number of data stored in buffer, so we use < instead of <=
 	    for(int i=0; i<bufferCounter; i++){
 	        // ======================================
@@ -516,7 +514,7 @@ void database_task(void *pvParameters){
     		updateDailyFlag=false;
     	}
 
-    	wifi_connection_end();
+    	//wifi_connection_end();
         // Wait for another update: 1 minute
         vTaskDelay(60000/portTICK_RATE_MS);
 
@@ -569,6 +567,7 @@ void app_main() {
     //=============================
 
     wifi_connection_begin();
+    wifi_connection_start();
 
     //=============================
     // RTC configuration
@@ -909,7 +908,7 @@ static void update_frontEndStatus(char *motorStatusAddress){
 
 
 static void update_sntp_time(void) {
-	wifi_connection_start();
+	//wifi_connection_start();
 	#if CONFIG_debug
 		ESP_LOGI(TAG, "Initializing SNTP");
 	#endif
@@ -935,7 +934,7 @@ static void update_sntp_time(void) {
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
     sntp_stop();
-    wifi_connection_end();
+    //wifi_connection_end();
 }
 
 void time_sync_notification_cb(struct timeval *tv) {
