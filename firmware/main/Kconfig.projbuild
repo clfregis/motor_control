@@ -35,3 +35,19 @@ menu "Motor Configuration"
 			Show the log of operation for debug.
 
 endmenu
+
+
+menu "WiFi Configuration"
+
+	config wifissid
+		string "WiFi SSID"
+		default "MY_SSID"
+		help
+			WiFi's SSID connection.
+
+	config wifipass
+		string "WiFi Password"
+		default "MY_Password"
+		help
+			WiFi's Password.
+endmenu

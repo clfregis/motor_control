@@ -22,7 +22,7 @@
 #include "esp_attr.h"
 #include "esp_sleep.h"
 #include "nvs_flash.h"
-#include <protocol_examples_common.h>
+//#include <protocol_examples_common.h>
 #include "esp_sntp.h"
 
 #include "esp_wifi.h"
@@ -199,6 +199,8 @@ static void IRAM_ATTR gpio_isr_handler(void* arg);
  * @result      database with updated daily operation information
 */
 static void update_daily(char *motorDailyAddress);
+static esp_err_t event_handler(void *ctx, system_event_t *event);
+int startsWith(const char *a, const char *b);
 //==========================
 // End Function definitions
 //==========================
@@ -240,6 +242,8 @@ uint8_t updateBufferCounter=0;
 bool updateDailyFlag = false;
 // Create a global variable of type xQueueHandle, which is the type we need to reference a FreeRTOS queue.
 static xQueueHandle gpio_evt_queue = NULL;
+static EventGroupHandle_t wifi_event_group;
+const int CONNECTED_BIT = BIT0;
 #if CONFIG_debug
     static const char *TAG = "LwIP SNTP";
     static const char *TAG_1 = "HTTP Request";
@@ -810,13 +814,18 @@ static void get_sp_time(char *motorSPAddress){
         char valor[esp_http_client_get_content_length(client)];
         // Read the stream of data
         esp_http_client_read(client, valor, esp_http_client_get_content_length(client));
-
-        cJSON *root = cJSON_Parse(valor);
-        currentReading = cJSON_GetObjectItem(root,motorSPAddress)->valueint;
-        cJSON_Delete(root);
-        if(currentReading!=lastReading){
-        	spTimesec=currentReading;
-        	continuousRunningTime=0;
+        // If there is no value on the child, use the default sptime, else, update the value from firebase
+        if(startsWith(valor,"null")){
+            // Does nothing
+        }
+        else{
+            cJSON *root = cJSON_Parse(valor);
+            currentReading = cJSON_GetObjectItem(root,motorSPAddress)->valueint;
+            cJSON_Delete(root);
+            if(currentReading!=lastReading){
+                spTimesec=currentReading;
+                continuousRunningTime=0;
+            }
         }
         //============
         // CONFIG_debug, but, in the future, perform a verification that the message was sent
@@ -882,9 +891,15 @@ static void update_frontEndStatus(char *motorStatusAddress){
 	        char valor[esp_http_client_get_content_length(client)];
 	        // Read the stream of data
 	        esp_http_client_read(client, valor, esp_http_client_get_content_length(client));
-	        cJSON *root = cJSON_Parse(valor);
-	        frontEndReset = cJSON_GetObjectItem(root,motorStatusAddress)->valueint;
-	        cJSON_Delete(root);
+            // If there is no value on the child, use the default sptime, else, update the value from firebase
+            if(startsWith(valor,"null")){
+                // Does nothing
+            }
+            else{
+                cJSON *root = cJSON_Parse(valor);
+	            frontEndReset = cJSON_GetObjectItem(root,motorStatusAddress)->valueint;
+	            cJSON_Delete(root);
+            }
 	        //============
 	        // CONFIG_debug, but, in the future, perform a verification that the message was sent
 	        // char valor[77];
@@ -959,21 +974,51 @@ static void obtain_time(time_t *local_now, struct tm *local_timeinfo){
 
 
 static void wifi_connection_begin(void){
-    ESP_ERROR_CHECK( nvs_flash_init() );
-    tcpip_adapter_init();
-    ESP_ERROR_CHECK( esp_event_loop_create_default() );
+    // initialize NVS
+	ESP_ERROR_CHECK(nvs_flash_init());
+	
+	// create the event group to handle wifi events
+	wifi_event_group = xEventGroupCreate();
+		
+	// initialize the tcp stack
+	tcpip_adapter_init();
+
+	// initialize the wifi event handler
+	ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
+	
+	// initialize the wifi stack in STAtion mode with config in RAM
+	wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
+	ESP_ERROR_CHECK(esp_wifi_init(&wifi_init_config));
+	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+
+	// configure the wifi connection and start the interface
+	wifi_config_t wifi_config = {
+        .sta = {
+            .ssid = CONFIG_wifissid,
+            .password = CONFIG_wifipass,
+            .bssid_set = 0
+        },
+    };
+	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
 }
 
 static void wifi_connection_start(void){
-	/* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-     * Read "Establishing Wi-Fi or Ethernet Connection" section in
-     * examples/protocols/README.md for more information about this function.
-     */
-    ESP_ERROR_CHECK(example_connect());
+    // wait for connection for 30 seconds
+	xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, 30000/portTICK_RATE_MS);
+	//printf("connected!\n");
+	
+	// print the local IP address
+	tcpip_adapter_ip_info_t ip_info;
+	ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info));
+	printf("IP Address:  %s\n", ip4addr_ntoa(&ip_info.ip));
+	printf("Subnet mask: %s\n", ip4addr_ntoa(&ip_info.netmask));
+	printf("Gateway:     %s\n", ip4addr_ntoa(&ip_info.gw));
 }
 
 static void wifi_connection_end(void){
-    ESP_ERROR_CHECK( example_disconnect() );
+    ESP_ERROR_CHECK(esp_wifi_disconnect());
 }
 
 // When hardware interrupts occurs on the pre-determined pin, it calls this functions which inserts and event on the queue
@@ -1031,6 +1076,34 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt) {
             break;
     }
     return ESP_OK;
+}
+
+// Wifi event handler
+static esp_err_t event_handler(void *ctx, system_event_t *event){
+    switch(event->event_id) {
+		
+    case SYSTEM_EVENT_STA_START:
+         ESP_ERROR_CHECK(esp_wifi_connect());
+        break;
+    
+	case SYSTEM_EVENT_STA_GOT_IP:
+        xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+        break;
+    
+	case SYSTEM_EVENT_STA_DISCONNECTED:
+		xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
+        break;
+    
+	default:
+        break;
+    }
+   
+	return ESP_OK;
+}
+
+int startsWith(const char *a, const char *b){
+   if(strncmp(a, b, strlen(b)) == 0) return 1;
+   return 0;
 }
 //==========================
 // End of Functions
