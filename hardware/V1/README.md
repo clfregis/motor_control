@@ -1,4 +1,4 @@
-# Hardware
+# Hardware V1
 ______________
 
 ## 3D Model of the board when mounted
