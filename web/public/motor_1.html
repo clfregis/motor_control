@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="en-US">
 <head>
     <meta charset="UTF-8">
@@ -52,6 +52,7 @@
                     <p id="currentTemperature">Temperature: </p>
                     <p id="currentHumidity">Humidity:</p>
                     <p id="lastUpdate">Last Update:</p>
+                    <p id="gasValue">Gas:</p>
                     <div id="resetDiv">
                         <input id="resetButton" type="button" value="Reset"  />
                         <div class="loader" id="loader"></div>
@@ -182,8 +183,12 @@
     <!-- FontAwesome icon usage
          <i class="fas fa-cloud"></i> Just copy and paste the icon from fas website-->
     <script src="plugins/fontawesome/js/all.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-app.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-database.js"></script>
+    <!-- The core Firebase JS SDK is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/8.2.2/firebase-app.js"></script>
+
+    <!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+	<script src="https://www.gstatic.com/firebasejs/8.2.2/firebase-database.js"></script>
     <script src="js/main.js"></script>
 
 </body>

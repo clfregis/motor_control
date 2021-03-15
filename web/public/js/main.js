@@ -1,6 +1,15 @@
 // Paste below the Firebase config object
+var firebaseConfig = {
+  apiKey: "AIzaSyD0La4jfHL-3QPhO8djiHeCgrj6uM4T5_s",
+  authDomain: "margarita-1ddc1.firebaseapp.com",
+  databaseURL: "https://margarita-1ddc1.firebaseio.com",
+  projectId: "margarita-1ddc1",
+  storageBucket: "margarita-1ddc1.appspot.com",
+  messagingSenderId: "98433319312",
+  appId: "1:98433319312:web:3a540923827bfd31663315"
+};
 
-var temp = [], hum = [], time = [], state = [], daily = [], continuous = [], timeDaily = [];
+var temp = [],gas = [], hum = [], time = [], state = [], daily = [], continuous = [], timeDaily = [];
 var status, current_motor;
 const currentMotor = {
   'motor_1' : 'Motor 1',
@@ -51,6 +60,9 @@ window.addEventListener('load', () => {
         if (n=='CO'){
           continuous.push(format_ISOhour(snap[i][n]));
         }
+        if (n=='GAS'){
+          gas.push(snap[i][n]);
+        }
       }
     }
     let current_temp = temp[temp.length - 1];
@@ -59,6 +71,7 @@ window.addEventListener('load', () => {
     let current_state = state[state.length - 1];
     let current_daily = daily[daily.length - 1];
     let current_continuous = continuous[continuous.length - 1];
+    let current_gas = gas[gas.length - 1];
     // Update variables to a human readable format
     status = yStatusLabels[current_state];
     current_motor = currentMotor[motor_label];
@@ -75,6 +88,7 @@ window.addEventListener('load', () => {
     document.getElementById("currentHumidity").innerHTML = "Humidity: " + current_hum + "%";
     document.getElementById("dailyOperation").innerHTML = "Daily: " + current_daily;
     document.getElementById("continuousOperation").innerHTML = "Continuous: " + current_continuous;
+    document.getElementById("gasValue").innerHTML = "Gas: " + current_gas;
     document.getElementById("lastUpdate").innerHTML = "Last Update: " + format_hour(current_time/1000) + ", " + format_date(current_time/1000);
     // Draw Graphs
     drawGraph(time, temp, 'Temperature [ºC]', 'Temperature', 'Temperature: %v ºC', 'spline', '#C6BD74', 45);

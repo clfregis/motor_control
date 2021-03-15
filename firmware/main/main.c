@@ -13,6 +13,8 @@
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
 #include "driver/gpio.h"
+#include "driver/adc.h"
+#include "esp_adc_cal.h"
 #include <dht11.h>
 #include <time.h>
 #include <sys/time.h>
@@ -66,6 +68,8 @@
 #define GPIO_INPUT_PIN_SEL      ((1ULL<<GPIO_INPUT_IO_0) | (1ULL<<GPIO_INPUT_IO_1))
 #define GPIO_DATA_0             4   // DHT11 Sensor on the final code, try to use a DHT22 library
 #define ESP_INTR_FLAG_DEFAULT   0
+#define DEFAULT_VREF    1100        //Use adc2_vref_to_gpio() to obtain a better estimate
+#define NO_OF_SAMPLES   64          //Multisampling
 
 //==========================
 // Function definitions
@@ -198,9 +202,12 @@ static void IRAM_ATTR gpio_isr_handler(void* arg);
  * @param       motorDailyAddress      Pointer to motorAddress
  * @result      database with updated daily operation information
 */
+
 static void update_daily(char *motorDailyAddress);
 static esp_err_t event_handler(void *ctx, system_event_t *event);
 int startsWith(const char *a, const char *b);
+static void check_efuse(void);
+static void print_char_val_type(esp_adc_cal_value_t val_type);
 //==========================
 // End Function definitions
 //==========================
@@ -212,6 +219,8 @@ int startsWith(const char *a, const char *b);
 // Create a global variable of type uint8_t to store temperature and another to store humidity
 uint8_t temperature = 0;
 uint8_t humidity = 0;
+uint32_t adc_reading = 0;
+uint32_t voltage = 0;
 // Global variables to handle the status of the motor
 uint8_t motorStatus = 0; // It starts off
 time_t runningTime = 0;
@@ -244,6 +253,12 @@ bool updateDailyFlag = false;
 static xQueueHandle gpio_evt_queue = NULL;
 static EventGroupHandle_t wifi_event_group;
 const int CONNECTED_BIT = BIT0;
+
+static esp_adc_cal_characteristics_t *adc_chars;
+static const adc_channel_t channel = ADC_CHANNEL_6;     //GPIO34 if ADC1, GPIO14 if ADC2
+static const adc_atten_t atten = ADC_ATTEN_DB_0;
+static const adc_unit_t unit = ADC_UNIT_1;
+
 #if CONFIG_debug
     static const char *TAG = "LwIP SNTP";
     static const char *TAG_1 = "HTTP Request";
@@ -369,7 +384,10 @@ void motor_supervisor_task(void *arg) {
             ESP_LOGI(TAG_DEBUG, "Update Buffer Counter: %d", updateBufferCounter);
             ESP_LOGI(TAG_DEBUG, "Current State: %d", currentState);
             ESP_LOGI(TAG_DEBUG, "Last State: %d", lastState);
-            ESP_LOGI(TAG_DEBUG, "update Flag: %d", updateDailyFlag);
+            ESP_LOGI(TAG_DEBUG, "Update Flag: %d", updateDailyFlag);
+            ESP_LOGI(TAG_DEBUG, "Temperature: %d", temperature);
+            ESP_LOGI(TAG_DEBUG, "ADC RAW: %d", adc_reading);
+            ESP_LOGI(TAG_DEBUG, "ADC Voltage: %dmV", voltage);
             ESP_LOGI(TAG_DEBUG, "Free Heap Size: %d", esp_get_free_heap_size());
             ESP_LOGI(TAG_DEBUG, "Minimum Heap Size: %d", esp_get_minimum_free_heap_size());
             printf("\n");
@@ -412,6 +430,15 @@ void motor_supervisor_task(void *arg) {
    		temperature = DHT11_read().temperature;
     	// Update humidity
     	humidity = DHT11_read().humidity;
+        
+        //Multisampling - Update Gas sensor value
+        for (int i = 0; i < NO_OF_SAMPLES; i++) {
+            adc_reading += adc1_get_raw((adc1_channel_t)channel);
+        }
+        adc_reading /= NO_OF_SAMPLES;
+
+        //Convert adc_reading to voltage in mV
+        voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
 
     	// Only store data if it is valid and if the motor changed its state
     	if(temperature<=70 && humidity<=100 && (updateBufferCounter>=59 || currentState!=lastState)){
@@ -573,6 +600,18 @@ void app_main() {
     wifi_connection_begin();
     wifi_connection_start();
 
+    //Check if Two Point or Vref are burned into eFuse
+    check_efuse();
+
+    //Configure ADC
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(channel, atten);
+
+    //Characterize ADC
+    adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
+    esp_adc_cal_value_t val_type = esp_adc_cal_characterize(unit, atten, ADC_WIDTH_BIT_12, DEFAULT_VREF, adc_chars);
+    print_char_val_type(val_type);
+
     //=============================
     // RTC configuration
     //=============================
@@ -658,8 +697,8 @@ static void bufferUpdate(void){
 	time(&now); // Does not take into consideration the time zone
 
     sprintf(bufferData[bufferCounter],
-    		"{ \"T\" : %d, \"H\" : %d, \"S\" : %d, \"D\" : %ld, \"DO\" : %ld, \"CO\" : %ld }",
-    		temperature, humidity, motorStatus, now, runningTime, continuousRunningTime);
+    		"{ \"T\" : %d, \"H\" : %d, \"S\" : %d, \"D\" : %ld, \"DO\" : %ld, \"CO\" : %ld, \"GAS\" : %d }",
+    		temperature, humidity, motorStatus, now, runningTime, continuousRunningTime, adc_reading);
     bufferCounter++;
 }
 
@@ -1106,6 +1145,32 @@ static esp_err_t event_handler(void *ctx, system_event_t *event){
 int startsWith(const char *a, const char *b){
    if(strncmp(a, b, strlen(b)) == 0) return 1;
    return 0;
+}
+
+static void check_efuse(void) {
+    //Check TP is burned into eFuse
+    if (esp_adc_cal_check_efuse(ESP_ADC_CAL_VAL_EFUSE_TP) == ESP_OK) {
+        printf("eFuse Two Point: Supported\n");
+    } else {
+        printf("eFuse Two Point: NOT supported\n");
+    }
+
+    //Check Vref is burned into eFuse
+    if (esp_adc_cal_check_efuse(ESP_ADC_CAL_VAL_EFUSE_VREF) == ESP_OK) {
+        printf("eFuse Vref: Supported\n");
+    } else {
+        printf("eFuse Vref: NOT supported\n");
+    }
+}
+
+static void print_char_val_type(esp_adc_cal_value_t val_type) {
+    if (val_type == ESP_ADC_CAL_VAL_EFUSE_TP) {
+        printf("Characterized using Two Point Value\n");
+    } else if (val_type == ESP_ADC_CAL_VAL_EFUSE_VREF) {
+        printf("Characterized using eFuse Vref\n");
+    } else {
+        printf("Characterized using Default Vref\n");
+    }
 }
 //==========================
 // End of Functions
